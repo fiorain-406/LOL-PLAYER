@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>내전 관리 사이트</title>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#222; margin:0; padding:20px; color:#f0f0f0; }
+nav { text-align:center; margin-bottom:30px; }
+nav button { background: linear-gradient(145deg,#ffb347,#ffcc80); color:#121212; border:none; padding:10px 18px; margin:0 5px; border-radius:8px; cursor:pointer; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.5); transition:all .3s; }
+nav button:hover { background: linear-gradient(145deg,#ff8c42,#ffb347); transform:translateY(-2px); }
+
+.section { background:#2a2a2a; padding:25px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.5); margin-bottom:40px; }
+table.dataTable { width:100%; border-collapse:collapse; color:#f0f0f0; }
+table.dataTable th { background: linear-gradient(145deg,#ffb347,#ff8c42); color:#121212; font-weight:600; }
+table.dataTable td, table.dataTable th { text-align:center; padding:10px; position:relative; }
+table.dataTable tbody tr:hover td { background-color:#ffcc80 !important; color:#121212 !important; transition: background-color .12s ease; }
+tr.editing td { background-color:#ffd8a8 !important; }
+
+.delete-btn { color:#121212; background:linear-gradient(145deg,#ffb347,#ff8c42); border:none; padding:4px 8px; border-radius:6px; cursor:pointer; display:none; box-shadow:0 2px 4px rgba(0,0,0,0.4); transition:all .3s; }
+.delete-btn:hover { background: linear-gradient(145deg,#ff8c42,#ffb347); }
+
+#start-edit-btn,#edit-users-btn,#btn-add-user-bottom,#btn-match {
+    position:fixed; bottom:20px; z-index:1000; padding:12px 20px; border:none; border-radius:10px; font-weight:600; cursor:pointer; box-shadow:0 5px 10px rgba(0,0,0,0.5); color:#121212; background:linear-gradient(145deg,#ffb347,#ffcc80); transition:all .3s;
+}
+#start-edit-btn,#edit-users-btn,#btn-add-user-bottom { right:20px; }
+#btn-add-user-bottom { right:200px; display:none; }
+#btn-match { right:20px; display:none; }
+
+#start-edit-btn:hover,#edit-users-btn:hover,#btn-add-user-bottom:hover,#btn-match:hover { transform:translateY(-2px); background:linear-gradient(145deg,#ff8c42,#ffb347); }
+
+.team-container select, select.match-p {
+    padding:10px; font-size:16px; border-radius:6px; border:1px solid #555; background:#2a2a2a; color:#f0f0f0; width:100%;
+}
+input[type=text], input[type=number], input[type=date] { padding:6px 8px; border-radius:6px; border:1px solid #555; background:#2a2a2a; color:#f0f0f0; }
+.dataTables_filter { margin-bottom:15px !important; }
+
+#match-team { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; max-width:640px; margin:0 auto; }
+
+.select2-container--default .select2-selection--single { background:#2a2a2a; border:1px solid #555; border-radius:6px; height:44px; box-sizing:border-box; }
+.select2-container--default .select2-selection--single .select2-selection__rendered { line-height:42px; color:#f0f0f0; padding-left:8px; }
+.select2-container--default .select2-selection--single .select2-selection__arrow { height:44px; right:8px; }
+.select2-container--default .select2-selection--single .select2-selection__arrow b { border-color:#f0f0f0 transparent transparent transparent; }
+.select2-dropdown, .select2-container--default .select2-results > .select2-results__options { background:#2a2a2a; color:#f0f0f0; }
+.select2-container--default .select2-search--dropdown .select2-search__field, .select2-container--default .select2-search--inline .select2-search__Field { background:#222; color:#f0f0f0; border:1px solid #444; border-radius:4px; padding:4px 6px; }
+.select2-results__option { color:#f0f0f0; }
+.select2-results__option[aria-selected="true"], .select2-results__option--highlighted[aria-selected] { background:#ffcc80; color:#121212; }
+.select2-container--default .select2-selection__rendered[title=""] { color:#9ea3a8; }
+
+#match-result { max-width:640px; margin:20px auto 0 auto; }
+#match-result table { width:100%; border-collapse:collapse; }
+#match-result th, #match-result td { border:1px solid #555; padding:8px; text-align:center; color:#f0f0f0; }
+#match-result th { background: linear-gradient(145deg,#ffb347,#ff8c42); color:#121212; font-weight:600; }
+
+@media (max-width:700px){ #match-team{ max-width:100%; grid-template-columns:1fr; } #btn-add-user-bottom{ right:140px; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <button id="menu-dashboard">대시보드</button>
+  <button id="menu-match">자동 팀 생성</button>
+</nav>
+
+<section id="section-dashboard" class="section">
+  <table id="userTable" class="display">
+    <thead>
+      <tr>
+        <th>No</th><th>이름</th><th>티어</th><th>레이팅</th><th>주라인</th><th>부라인</th>
+        <th>판수</th><th>승리</th><th>패배</th><th>승률</th><th>최근 경기</th><th>메뉴</th>
+      </tr>
+    </thead>
+  </table>
+</section>
+
+<section id="section-match" class="section" style="display:none;">
+  <div id="match-team">
+    <select class="match-p" id="match-p1"></select>
+    <select class="match-p" id="match-p2"></select>
+    <select class="match-p" id="match-p3"></select>
+    <select class="match-p" id="match-p4"></select>
+    <select class="match-p" id="match-p5"></select>
+    <select class="match-p" id="match-p6"></select>
+    <select class="match-p" id="match-p7"></select>
+    <select class="match-p" id="match-p8"></select>
+    <select class="match-p" id="match-p9"></select>
+    <select class="match-p" id="match-p10"></select>
+  </div>
+  <br>
+  <button id="btn-match">매칭하기</button>
+
+  <div id="match-result">
+    <h3>팀 매치 결과</h3>
+    <table>
+      <thead><tr><th>블루팀</th><th>레드팀</th></tr></thead>
+      <tbody>
+        <tr><td colspan="2" style="text-align:center;">매칭하기 버튼을 눌러 결과 확인</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<button id="start-edit-btn">유저 수정</button>
+<button id="edit-users-btn" style="display:none;">유저 수정 완료</button>
+<button id="btn-add-user-bottom" style="display:none;">유저 추가</button>
+
+<script>
+let editable=false;
+let idCounter = 0;
+
+/* 버튼/섹션 가시성 유지 */
+function updateUserEditButtonVisibility(){
+  if($('#section-dashboard').is(':visible')){
+    if(editable){ $('#start-edit-btn').hide(); $('#edit-users-btn').show(); $('#btn-add-user-bottom').show(); }
+    else { $('#start-edit-btn').show(); $('#edit-users-btn').hide(); $('#btn-add-user-bottom').hide(); }
+  } else { $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide(); }
+
+  if($('#section-match').is(':visible')) $('#btn-match').show();
+  else $('#btn-match').hide();
+}
+
+$('nav button').click(function(){
+  $('.section').hide();
+  if(this.id==='menu-dashboard') $('#section-dashboard').show();
+  if(this.id==='menu-match') $('#section-match').show();
+  updateUserEditButtonVisibility();
+});
+
+/* DataTable 초기화 (원본 구조 유지) */
+var userTable = $('#userTable').DataTable({
+  paging:false,
+  serverSide:false,
+  data:[],
+  autoWidth:false,
+  columns:[
+    {data:null, render:(d,t,r,m)=> m.row+1},
+    {data:"userName"},
+    {data:"tier"},
+    {data:"rating"},
+    {data:"mainLane"},
+    {data:"subLane"},
+    {data:"matchNumber"},
+    {data:"win"},
+    {data:"loss"},
+    {data:"winRate"},
+    {data:"lastPlayDateSince"},
+    {data:null, defaultContent:'<button class="delete-btn">삭제</button>', orderable:false}
+  ],
+  columnDefs:[
+    { targets: 1, width: '17%', className:'dt-left' },
+    { targets: 4, width: '7%'  },
+    { targets: 5, width: '7%'  },
+    { targets:10, width: '8%'  }
+  ],
+  createdRow: function(row, data){ }
+});
+
+/* 승률 계산 */
+function calculateWinRate(win, match){ return match===0?'0%':Math.round((win/match)*100)+'%'; }
+
+/* 티어 계산 */
+function getTierByRating(rating){
+  if(rating>=3000) return '챌린저';
+  if(rating>=2900) return '그마';
+  if(rating>=2800) return '마스터 3';
+  if(rating>=2700) return '마스터 2';
+  if(rating>=2600) return '마스터 1';
+  if(rating>=2500) return '마스터 0';
+  if(rating>=2450) return '다이아 1';
+  if(rating>=2400) return '다이아 2';
+  if(rating>=2350) return '다이아 3';
+  if(rating>=2300) return '다이아 4';
+  if(rating>=2250) return '다이아 5';
+  if(rating>=2200) return '에메랄드 1';
+  if(rating>=2150) return '에메랄드 2';
+  if(rating>=2100) return '에메랄드 3';
+  if(rating>=2050) return '에메랄드 4';
+  if(rating>=2000) return '에메랄드 5';
+  if(rating>=1950) return '플레티넘 1';
+  if(rating>=1900) return '플레티넘 2';
+  if(rating>=1850) return '플레티넘 3';
+  if(rating>=1800) return '플레티넘 4';
+  if(rating>=1750) return '플레티넘 5';
+  if(rating>=1700) return '골드 1';
+  if(rating>=1650) return '골드 2';
+  if(rating>=1600) return '골드 3';
+  if(rating>=1550) return '골드 4';
+  if(rating>=1500) return '골드 5';
+  if(rating>=1450) return '실버 1';
+  if(rating>=1400) return '실버 2';
+  if(rating>=1350) return '실버 3';
+  if(rating>=1300) return '실버 4';
+  if(rating>=1250) return '실버 5';
+  if(rating>=1200) return '브론즈 1';
+  if(rating>=1150) return '브론즈 2';
+  if(rating>=1100) return '브론즈 3';
+  if(rating>=1050) return '브론즈 4';
+  if(rating>=1000) return '브론즈 5';
+  return '아이언';
+}
+
+/* 티어 색상 적용 */
+function applyTierColors(){
+  $('#userTable tbody tr').each(function(){
+    let tierCell=$(this).find('td').eq(2);
+    let tier=tierCell.text().trim();
+    let bg='#2a2a2a', color='#f0f0f0';
+    if(tier.includes('아이언')) bg='#FFFFFF', color='#121212';
+    else if(tier.includes('브론즈')) bg='#DEB84F', color='#121212';
+    else if(tier.includes('실버')) bg='#BDBDBD', color='#fff';
+    else if(tier.includes('골드')) bg='#FAED7D', color='#121212';
+    else if(tier.includes('플레티넘')) bg='#ABF200', color='#121212';
+    else if(tier.includes('에메랄드')) bg='#2FED28', color='#121212';
+    else if(tier.includes('다이아')) bg='#00D8FF', color='#121212';
+    else if(tier.includes('마스터')) bg='#C98AFF', color='#121212';
+    else if(tier.includes('그마')) bg='#FF3636', color='#fff';
+    else if(tier.includes('챌린저')) bg='linear-gradient(to right,#ffd700,#1e90ff)', color='#121212';
+
+    if(tier.includes('챌린저')) tierCell.css({'background':bg,'color':color,'font-weight':'600'});
+    else tierCell.css({'background-color':bg,'color':color,'font-weight':'600'});
+  });
+}
+
+/* 로컬 저장/불러오기 */
+function loadUsersFromLocalStorage(){
+  let users=JSON.parse(localStorage.getItem('users'))||[];
+  // assign ids if missing and maintain idCounter
+  users.forEach(u=>{
+    if(!u.userId){
+      idCounter = Math.max(idCounter, Date.now());
+      u.userId = ++idCounter;
+    } else {
+      idCounter = Math.max(idCounter, Number(u.userId));
+    }
+  });
+  userTable.clear();
+  users.forEach(u=>{
+    u.matchNumber=(u.win||0)+(u.loss||0);
+    u.winRate=calculateWinRate(u.win||0, u.matchNumber);
+    u.tier=getTierByRating(u.rating||0);
+    userTable.row.add(u);
+  });
+  userTable.draw();
+  initPlayers();
+  updateDeleteButtons();
+  applyTierColors();
+}
+function saveUsersToLocalStorage(){
+  let users=userTable.rows().data().toArray();
+  users.forEach(u=>{
+    u.matchNumber = (u.win||0) + (u.loss||0);
+    u.winRate = calculateWinRate(u.win||0, u.matchNumber);
+    u.tier = getTierByRating(u.rating||0);
+    if(!u.userId) { idCounter = Math.max(idCounter, Date.now()); u.userId = ++idCounter; }
+  });
+  localStorage.setItem('users',JSON.stringify(users));
+  userTable.rows().invalidate().draw(false);
+  updateDeleteButtons();
+  applyTierColors();
+}
+
+/* 유저 추가: 즉시 추가 (팝업 없음), 필수 필드 사전 계산 */
+$('#btn-add-user-bottom').off('click').on('click', function(){
+  // determine new unique id
+  idCounter = Math.max(idCounter, Date.now());
+  let newId = ++idCounter;
+  // default values (same structure as others)
+  let newUser = {
+    userId: newId,
+    userName: '이름',
+    rating: 1000,
+    mainLane: '-',
+    subLane: '-',
+    win: 0,
+    loss: 0,
+    lastPlayDateSince: '-'
+  };
+  newUser.matchNumber = (newUser.win||0)+(newUser.loss||0);
+  newUser.winRate = calculateWinRate(newUser.win, newUser.matchNumber);
+  newUser.tier = getTierByRating(newUser.rating||0);
+  userTable.row.add(newUser).draw(false);
+  saveUsersToLocalStorage();
+  initPlayers();
+  applyTierColors();
+});
+
+/* 편집 모드 토글 및 버튼 가시성 */
+$('#start-edit-btn').off('click').on('click',function(){
+  editable=true;
+  updateUserEditButtonVisibility();
+  updateDeleteButtons();
+});
+$('#edit-users-btn').off('click').on('click',function(){
+  editable=false;
+  saveUsersToLocalStorage();
+  updateUserEditButtonVisibility();
+  updateDeleteButtons();
+});
+
+/* 삭제 버튼 표시/숨김 */
+function updateDeleteButtons(){
+  $('#userTable tbody tr').each(function(){
+    let $btn = $(this).find('.delete-btn');
+    if(editable) $btn.show();
+    else $btn.hide();
+  });
+}
+
+/* 삭제 버튼: 위임 바인딩 -> 동적 요소 작동 */
+$('#userTable tbody').off('click', '.delete-btn').on('click', '.delete-btn', function(e){
+  if(!editable) return;
+  if(!confirm('정말 삭제하시겠습니까?')) return;
+  let row = userTable.row($(this).closest('tr'));
+  row.remove().draw(false);
+  saveUsersToLocalStorage();
+  initPlayers();
+});
+
+/* 셀 직접 편집 기능 (원본 복구) */
+$('#userTable').off('click','td').on('click','td', function(){
+  if(!editable) return;
+  let cell = userTable.cell(this);
+  // if cell is in header or invalid, return
+  if(!cell.index()) return;
+  let colIdx = cell.index().column;
+  // Prevent editing for columns: No(0), tier(2), matchNumber(6), winRate(9), menu(11)
+  if(colIdx===0 || colIdx===2 || colIdx===6 || colIdx===9 || colIdx===11) return;
+  let originalValue = cell.data();
+  // create input
+  let $input = $('<input type="text">').val(originalValue);
+  if(colIdx===3 || colIdx===7 || colIdx===8) $input.attr('type','number').attr('min',0);
+  $(this).html($input);
+  $(this).closest('tr').addClass('editing');
+  $input.focus();
+  function finishEdit(){
+    let val = $input.val();
+    if(colIdx===3 || colIdx===7 || colIdx===8){
+      val = val === '' ? 0 : Number(val);
+      if(isNaN(val)) val = 0;
+    }
+    cell.data(val).draw(false);
+    $(cell.node()).closest('tr').removeClass('editing');
+    // update related stats
+    let rowIdx = cell.index().row;
+    updateStatsIfNeeded(colIdx, rowIdx);
+  }
+  $input.on('blur', finishEdit);
+  $input.on('keydown', function(e){
+    if(e.key==='Enter') { finishEdit(); }
+    if(e.key==='Escape') { cell.data(originalValue).draw(false); $(cell.node()).closest('tr').removeClass('editing'); }
+  });
+});
+
+/* 업데이트 후 통계 재계산 */
+function updateStatsIfNeeded(colIdx, rowIdx){
+  let data = userTable.row(rowIdx).data();
+  data.win = parseInt(data.win) || 0;
+  data.loss = parseInt(data.loss) || 0;
+  data.matchNumber = data.win + data.loss;
+  data.winRate = calculateWinRate(data.win, data.matchNumber);
+  if(colIdx===3){
+    data.tier = getTierByRating(parseInt(data.rating)||0);
+  }
+  userTable.row(rowIdx).data(data).invalidate().draw(false);
+  updateDeleteButtons();
+  applyTierColors();
+}
+
+/* ---------------------------
+   Select2 초기화 및 중복 선택 방지 로직
+   --------------------------- */
+
+/* refreshMatchSelectOptions:
+   - 현재 모든 match-p select의 선택값을 읽음
+   - 각 select별로 '선택 가능' 옵션만 남기고 (자기 자신은 항상 포함)
+   - select2를 재생성하여 UI 갱신
+*/
+function refreshMatchSelectOptions(){
+  let users = userTable.rows().data().toArray();
+  // gather currently selected ids (strings)
+  let selected = $('.match-p').map(function(){ return $(this).val(); }).get().filter(v=>v!=='' && v!=null);
+  let selectedSet = new Set(selected.map(String));
+
+  $('.match-p').each(function(){
+    let sel = $(this);
+    let curVal = sel.val();
+    // destroy select2 to safely modify options
+    if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
+    sel.empty();
+    sel.append('<option value=""></option>');
+    users.forEach(u=>{
+      // include option if:
+      // - not currently selected elsewhere OR
+      // - it's the current value of this select (so user can keep their selection)
+      if(!selectedSet.has(String(u.userId)) || String(u.userId) === String(curVal)){
+        sel.append($('<option>').val(u.userId).text(u.userName));
+      }
+    });
+    // restore value
+    sel.val(curVal||'');
+    // re-init select2
+    sel.select2({ placeholder:'선수 선택', width:'100%', allowClear:true });
+  });
+}
+
+/* initPlayers: 기존 초기화 유지 + 중복 방지 바인딩
+   - rebuilds options for both match-p and log-p
+   - then calls refreshMatchSelectOptions to remove already selected users from other selects
+   - binds change event on .match-p to refresh options on selection change
+*/
+function initPlayers(){
+  let users=userTable.rows().data().toArray();
+  // initialize log-p selects (no uniqueness constraint)
+  $('.log-p').each(function(){
+    let sel = $(this);
+    let val = sel.val();
+    if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
+    sel.empty();
+    sel.append('<option value=""></option>');
+    users.forEach(u=> sel.append($('<option>').val(u.userId).text(u.userName)));
+    sel.val(val||'');
+    sel.select2({ placeholder:'선수 선택', width:'100%', allowClear:true });
+  });
+
+  // initialize match-p selects (we'll call refresh to enforce uniqueness)
+  $('.match-p').each(function(){
+    let sel = $(this);
+    if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
+    sel.empty();
+    sel.append('<option value=""></option>');
+    users.forEach(u=> sel.append($('<option>').val(u.userId).text(u.userName)));
+    sel.val('');
+    sel.select2({ placeholder:'선수 선택', width:'100%', allowClear:true });
+  });
+
+  // ensure uniqueness immediately
+  refreshMatchSelectOptions();
+
+  // bind change to update other selects when one changes
+  $('.match-p').off('change.unique').on('change.unique', function(){
+    refreshMatchSelectOptions();
+  });
+}
+
+/* 팀 매치: 모든 5:5 조합 검사 (원본 기능 보존) */
+function generateBalancedTeams(selectedUsers){
+  let bestDiff=Infinity, bestTeams=null;
+  function combinations(arr, k) {
+    let results=[];
+    function comb(start, path){
+      if(path.length===k){ results.push(path.slice()); return; }
+      for(let i=start;i<arr.length;i++){ path.push(arr[i]); comb(i+1, path); path.pop(); }
+    }
+    comb(0,[]);
+    return results;
+  }
+  let allComb = combinations(selectedUsers,5);
+  allComb.forEach(teamA=>{
+    let teamB = selectedUsers.filter(u=>!teamA.includes(u));
+    let sumA = teamA.reduce((s,u)=>s + (parseInt(u.rating||0)), 0);
+    let sumB = teamB.reduce((s,u)=>s + (parseInt(u.rating||0)), 0);
+    let avgA = Math.round(sumA / 5);
+    let avgB = Math.round(sumB / 5);
+    let diff = Math.abs(avgA - avgB);
+    if(diff < bestDiff){
+      bestDiff = diff;
+      bestTeams = { teamA: teamA.slice(), teamB: teamB.slice(), avgA, avgB };
+    }
+  });
+  return bestTeams;
+}
+
+/* 매칭 버튼 ('매칭하기') 클릭 - UI for match-result shows Blue/Red with 5 names + avg */
+$('#btn-match').off('click').on('click', function(){
+  let selected = $('.match-p').map(function(){ return $(this).val(); }).get().filter(v=>v!=='' && v!=null);
+  if(selected.length !== 10){ alert('10명을 모두 선택해주세요'); return; }
+  let users = userTable.rows().data().toArray();
+  let selectedUsers = selected.map(id => users.find(u=>String(u.userId)==String(id)));
+  if(selectedUsers.some(u=>!u)){ alert('선택한 유저 중 데이터 누락이 있습니다.'); return; }
+  let teams = generateBalancedTeams(selectedUsers);
+  if(!teams){ alert('팀을 생성할 수 없습니다.'); return; }
+  let maxRows = 5;
+  let htmlRows = '';
+  for(let i=0;i<maxRows;i++){
+    htmlRows += `<tr><td>${teams.teamA[i]?.userName||''}</td><td>${teams.teamB[i]?.userName||''}</td></tr>`;
+  }
+  htmlRows += `<tr><td>평균 레이팅: ${teams.avgA}</td><td>평균 레이팅: ${teams.avgB}</td></tr>`;
+  $('#match-result tbody').html(htmlRows);
+});
+
+/* 내전 기록 저장/삭제 (간단 동작 - 로컬에 저장하거나 다른 로직 연결 가능) */
+$('#btn-log-save').off('click').on('click', function(){
+  // 기본 동작: 입력값 검증 후 간단히 console에 출력 (필요하면 로컬저장 또는 목록추가로 확장)
+  let date = $('#gameDate').val();
+  if(!date){ alert('게임 날짜를 입력해주세요.'); return; }
+  let set1 = $('#set1').val();
+  let set2 = $('#set2').val();
+  let set3 = $('#set3').val();
+  let players = $('.log-p').map(function(){ return $(this).val() || ''; }).get();
+  // 검증: 10명의 선수 중복/누락 체크는 필요시 확장 가능
+  if(players.filter(v=>v!=='').length !== 10){ if(!confirm('선수가 모두 선택되지 않았습니다. 계속 저장하시겠습니까?')) return; }
+  // 현재는 로컬스토리지에 간단히 기록 배열로 저장 (확장가능)
+  let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
+  logs.push({ date, set1, set2, set3, players });
+  localStorage.setItem('matchLogs', JSON.stringify(logs));
+  alert('기록이 저장되었습니다.');
+});
+
+$('#btn-log-delete').off('click').on('click', function(){
+  if(confirm('최근 기록을 삭제하시겠습니까?')) {
+    let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
+    if(logs.length>0){ logs.pop(); localStorage.setItem('matchLogs', JSON.stringify(logs)); alert('최근 기록이 삭제되었습니다.'); }
+    else alert('삭제할 기록이 없습니다.');
+  }
+});
+
+/* 초기 로드 */
+$(document).ready(function(){
+  loadUsersFromLocalStorage();
+  updateUserEditButtonVisibility();
+});
+</script>
+
+</body>
+</html>
