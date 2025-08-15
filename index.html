@@ -13,6 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <style>
+/* 기존 CSS 그대로 유지 */
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#222; margin:0; padding:20px; color:#f0f0f0; }
 nav { text-align:center; margin-bottom:30px; }
 nav button { background: linear-gradient(145deg,#ffb347,#ffcc80); color:#121212; border:none; padding:10px 18px; margin:0 5px; border-radius:8px; cursor:pointer; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.5); transition:all .3s; }
@@ -116,11 +117,20 @@ input[type=text], input[type=number], input[type=date] { padding:6px 8px; border
 let editable=false;
 let idCounter = 0;
 
+/* ---------------------------
+   권한 설정
+   --------------------------- */
+const allowedUsers = ['admin','manager']; // 허용할 사용자 이름
+let currentUser = prompt("사용자 이름을 입력하세요:");
+if(!allowedUsers.includes(currentUser)){
+    $('#start-edit-btn').hide(); // 권한 없으면 숨김
+}
+
 /* 버튼/섹션 가시성 유지 */
 function updateUserEditButtonVisibility(){
   if($('#section-dashboard').is(':visible')){
     if(editable){ $('#start-edit-btn').hide(); $('#edit-users-btn').show(); $('#btn-add-user-bottom').show(); }
-    else { $('#start-edit-btn').show(); $('#edit-users-btn').hide(); $('#btn-add-user-bottom').hide(); }
+    else { if(allowedUsers.includes(currentUser)) $('#start-edit-btn').show(); $('#edit-users-btn').hide(); $('#btn-add-user-bottom').hide(); }
   } else { $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide(); }
 
   if($('#section-match').is(':visible')) $('#btn-match').show();
