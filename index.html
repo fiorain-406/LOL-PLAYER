@@ -13,55 +13,81 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <style>
-/* 기존 CSS 그대로 유지 */
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#222; margin:0; padding:20px; color:#f0f0f0; }
-nav { text-align:center; margin-bottom:30px; }
-nav button { background: linear-gradient(145deg,#ffb347,#ffcc80); color:#121212; border:none; padding:10px 18px; margin:0 5px; border-radius:8px; cursor:pointer; font-weight:600; box-shadow:0 4px 6px rgba(0,0,0,0.5); transition:all .3s; }
-nav button:hover { background: linear-gradient(145deg,#ff8c42,#ffb347); transform:translateY(-2px); }
+/* 기본 스타일 (원본 유지 + 로그 테이블 약간 조정) */
+:root{--card:#2a2a2a;--accent1:#ffb347;--accent2:#ff8c42;--text:#f0f0f0;--muted:#555}
+body{font-family:Segoe UI, Tahoma, Geneva, Verdana,sans-serif;background:#222;margin:0;padding:20px;color:var(--text)}
+nav{text-align:center;margin-bottom:30px}
+nav button{background:linear-gradient(145deg,var(--accent1),#ffcc80);color:#121212;border:none;padding:10px 18px;margin:0 5px;border-radius:8px;cursor:pointer;font-weight:600;box-shadow:0 4px 6px rgba(0,0,0,.5);transition:all .2s}
+nav button:hover{background:linear-gradient(145deg,var(--accent2),var(--accent1));transform:translateY(-2px)}
+.section{background:var(--card);padding:25px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.5);margin-bottom:40px}
+table.dataTable, #log-result table, #match-result table{width:100%;border-collapse:collapse;color:var(--text)}
+table.dataTable th, #log-result th, #match-result th{background:linear-gradient(145deg,var(--accent1),var(--accent2));color:#121212;font-weight:600}
+table.dataTable td, table.dataTable th, #log-result td, #match-result td{padding:10px;text-align:center;position:relative;border:1px solid #444}
+table.dataTable tbody tr:hover td{background:#ffcc80 !important;color:#121212 !important;transition:background .12s}
+tr.editing td{background:#ffd8a8 !important}
 
-.section { background:#2a2a2a; padding:25px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.5); margin-bottom:40px; }
-table.dataTable { width:100%; border-collapse:collapse; color:#f0f0f0; }
-table.dataTable th { background: linear-gradient(145deg,#ffb347,#ff8c42); color:#121212; font-weight:600; }
-table.dataTable td, table.dataTable th { text-align:center; padding:10px; position:relative; }
-table.dataTable tbody tr:hover td { background-color:#ffcc80 !important; color:#121212 !important; transition: background-color .12s ease; }
-tr.editing td { background-color:#ffd8a8 !important; }
+.delete-btn{color:#121212;background:linear-gradient(145deg,var(--accent1),var(--accent2));border:none;padding:4px 8px;border-radius:6px;cursor:pointer;display:none;box-shadow:0 2px 4px rgba(0,0,0,.4);transition:all .2s}
+.delete-btn:hover{background:linear-gradient(145deg,var(--accent2),var(--accent1))}
 
-.delete-btn { color:#121212; background:linear-gradient(145deg,#ffb347,#ff8c42); border:none; padding:4px 8px; border-radius:6px; cursor:pointer; display:none; box-shadow:0 2px 4px rgba(0,0,0,0.4); transition:all .3s; }
-.delete-btn:hover { background: linear-gradient(145deg,#ff8c42,#ffb347); }
+/* 고정 버튼 스타일 (유저 수정, 추가, 매칭, 기록저장) */
+.fixed-btn{position:fixed;bottom:20px;z-index:1000;padding:12px 20px;border:none;border-radius:10px;font-weight:600;cursor:pointer;box-shadow:0 5px 10px rgba(0,0,0,.5);color:#121212;background:linear-gradient(145deg,var(--accent1),#ffcc80);transition:all .2s}
+.fixed-btn:hover{transform:translateY(-2px);background:linear-gradient(145deg,var(--accent2),var(--accent1))}
 
-#start-edit-btn,#edit-users-btn,#btn-add-user-bottom,#btn-match {
-    position:fixed; bottom:20px; z-index:1000; padding:12px 20px; border:none; border-radius:10px; font-weight:600; cursor:pointer; box-shadow:0 5px 10px rgba(0,0,0,0.5); color:#121212; background:linear-gradient(145deg,#ffb347,#ffcc80); transition:all .3s;
+#start-edit-btn,#edit-users-btn,#btn-add-user-bottom{right:20px}
+#btn-add-user-bottom{right:200px;display:none}
+#btn-match{right:20px;display:none}
+
+/* 내전 기록 버튼 (우측 하단) - '유저 수정' 버튼 위치와 동일 (겹치지 않음: 서로 다른 섹션에서 보임) */
+#btn-log-save{right:20px; display:none}
+
+/* selects / inputs */
+.team-container select, select.match-p, select.log-p{padding:10px;font-size:16px;border-radius:6px;border:1px solid var(--muted);background:var(--card);color:var(--text);width:100%}
+input[type=text], input[type=number], input[type=date]{padding:6px 8px;border-radius:6px;border:1px solid var(--muted);background:var(--card);color:var(--text)}
+.dataTables_filter{margin-bottom:15px !important}
+
+/* match & log players grid */
+#match-team,#log-players{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:640px;margin:0 auto}
+
+/* 승리팀/패배팀 라벨 라인 */
+#log-players-header{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:640px;margin:0 auto 10px}
+#log-players-header div{text-align:center;font-weight:700;color:var(--text)}
+
+/* 로그 결과는 대시보드와 동일하게 가로 전체 사용 */
+#log-result{max-width:100%;margin:20px 0 0}
+#log-result table td{text-align:left;padding:8px}
+
+/* 최근 기록표 메뉴 열 폭 줄이기 */
+#log-result td:last-child {
+    width: 80px;  /* 원하는 폭으로 조절 */
+    max-width: 80px;
+    word-wrap: break-word;
 }
-#start-edit-btn,#edit-users-btn,#btn-add-user-bottom { right:20px; }
-#btn-add-user-bottom { right:200px; display:none; }
-#btn-match { right:20px; display:none; }
 
-#start-edit-btn:hover,#edit-users-btn:hover,#btn-add-user-bottom:hover,#btn-match:hover { transform:translateY(-2px); background:linear-gradient(145deg,#ff8c42,#ffb347); }
+/* 날짜 컬럼 폭 축소 (요청) */
+#log-result thead th.date-col { width:150px; max-width:150px; }
 
-.team-container select, select.match-p {
-    padding:10px; font-size:16px; border-radius:6px; border:1px solid #555; background:#2a2a2a; color:#f0f0f0; width:100%;
+/* 로그의 레코드 삭제 버튼 스타일 (선택) */
+.log-record-delete{
+  padding:4px 8px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  background:linear-gradient(145deg,var(--accent1),var(--accent2));
+  color:#121212;
+  font-weight:600;
 }
-input[type=text], input[type=number], input[type=date] { padding:6px 8px; border-radius:6px; border:1px solid #555; background:#2a2a2a; color:#f0f0f0; }
-.dataTables_filter { margin-bottom:15px !important; }
 
-#match-team { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; max-width:640px; margin:0 auto; }
+/* 승/패 멤버 표시용 pill 스타일 (요청: 하늘색/연붉은색) */
+.winner-pill{background:#87CEFA;padding:2px 6px;margin:1px;border-radius:4px;display:inline-block;color:#121212}
+.loser-pill{background:#F08080;padding:2px 6px;margin:1px;border-radius:4px;display:inline-block;color:#121212}
 
-.select2-container--default .select2-selection--single { background:#2a2a2a; border:1px solid #555; border-radius:6px; height:44px; box-sizing:border-box; }
-.select2-container--default .select2-selection--single .select2-selection__rendered { line-height:42px; color:#f0f0f0; padding-left:8px; }
-.select2-container--default .select2-selection--single .select2-selection__arrow { height:44px; right:8px; }
-.select2-container--default .select2-selection--single .select2-selection__arrow b { border-color:#f0f0f0 transparent transparent transparent; }
-.select2-dropdown, .select2-container--default .select2-results > .select2-results__options { background:#2a2a2a; color:#f0f0f0; }
-.select2-container--default .select2-search--dropdown .select2-search__field, .select2-container--default .select2-search--inline .select2-search__Field { background:#222; color:#f0f0f0; border:1px solid #444; border-radius:4px; padding:4px 6px; }
-.select2-results__option { color:#f0f0f0; }
-.select2-results__option[aria-selected="true"], .select2-results__option--highlighted[aria-selected] { background:#ffcc80; color:#121212; }
-.select2-container--default .select2-selection__rendered[title=""] { color:#9ea3a8; }
+/* select2 look */
+.select2-container--default .select2-selection--single{background:var(--card);border:1px solid var(--muted);border-radius:6px;height:44px;box-sizing:border-box}
+.select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px;color:var(--text);padding-left:8px}
+.select2-dropdown,.select2-container--default .select2-results > .select2-results__options{background:var(--card);color:var(--text)}
+.select2-results__option[aria-selected="true"],.select2-results__option--highlighted[aria-selected]{background:#ffcc80;color:#121212}
 
-#match-result { max-width:640px; margin:20px auto 0 auto; }
-#match-result table { width:100%; border-collapse:collapse; }
-#match-result th, #match-result td { border:1px solid #555; padding:8px; text-align:center; color:#f0f0f0; }
-#match-result th { background: linear-gradient(145deg,#ffb347,#ff8c42); color:#121212; font-weight:600; }
-
-@media (max-width:700px){ #match-team{ max-width:100%; grid-template-columns:1fr; } #btn-add-user-bottom{ right:140px; } }
+@media (max-width:700px){#match-team,#log-players,#log-players-header{max-width:100%;grid-template-columns:1fr}#btn-add-user-bottom{right:140px}}
 </style>
 </head>
 <body>
@@ -69,8 +95,10 @@ input[type=text], input[type=number], input[type=date] { padding:6px 8px; border
 <nav>
   <button id="menu-dashboard">대시보드</button>
   <button id="menu-match">자동 팀 생성</button>
+  <button id="menu-log">내전 기록</button>
 </nav>
 
+<!-- DASHBOARD -->
 <section id="section-dashboard" class="section">
   <table id="userTable" class="display">
     <thead>
@@ -82,180 +110,156 @@ input[type=text], input[type=number], input[type=date] { padding:6px 8px; border
   </table>
 </section>
 
+<!-- MATCH SECTION -->
 <section id="section-match" class="section" style="display:none;">
-  <div id="match-team">
-    <select class="match-p" id="match-p1"></select>
-    <select class="match-p" id="match-p2"></select>
-    <select class="match-p" id="match-p3"></select>
-    <select class="match-p" id="match-p4"></select>
-    <select class="match-p" id="match-p5"></select>
-    <select class="match-p" id="match-p6"></select>
-    <select class="match-p" id="match-p7"></select>
-    <select class="match-p" id="match-p8"></select>
-    <select class="match-p" id="match-p9"></select>
-    <select class="match-p" id="match-p10"></select>
-  </div>
+  <div id="match-team"></div>
   <br>
-  <button id="btn-match">매칭하기</button>
+  <button id="btn-match" class="fixed-btn">매칭하기</button>
 
   <div id="match-result">
     <h3>팀 매치 결과</h3>
     <table>
       <thead><tr><th>블루팀</th><th>레드팀</th></tr></thead>
-      <tbody>
-        <tr><td colspan="2" style="text-align:center;">매칭하기 버튼을 눌러 결과 확인</td></tr>
-      </tbody>
+      <tbody><tr><td colspan="2" style="text-align:center">매칭하기 버튼을 눌러 결과 확인</td></tr></tbody>
     </table>
   </div>
 </section>
 
-<button id="start-edit-btn">유저 수정</button>
-<button id="edit-users-btn" style="display:none;">유저 수정 완료</button>
-<button id="btn-add-user-bottom" style="display:none;">유저 추가</button>
+<!-- LOG SECTION -->
+<section id="section-log" class="section" style="display:none;">
+  <!-- 헤더 라벨: 좌 - 승리팀, 우 - 패배팀 -->
+  <div id="log-players-header">
+    <div>승리팀</div>
+    <div>패배팀</div>
+  </div>
+
+  <div id="log-players"></div>
+  <br>
+
+  <!-- 세트/날짜 입력 제거 (요청대로) -->
+
+  <div id="log-result">
+    <h3>최근 기록</h3>
+    <table>
+      <thead><tr>
+        <th class="date-col">날짜</th>
+        <th>승리팀 멤버</th>
+        <th>패배팀 멤버</th>
+        <th>메뉴</th>
+      </tr></thead>
+      <tbody><tr><td colspan="4" style="text-align:center">저장된 기록이 없습니다.</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- bottom fixed buttons -->
+<button id="start-edit-btn" class="fixed-btn">유저 수정</button>
+<button id="edit-users-btn" class="fixed-btn" style="display:none">유저 수정 완료</button>
+<button id="btn-add-user-bottom" class="fixed-btn" style="display:none">유저 추가</button>
+<!-- 기록 저장 버튼 (우측 하단, 유저 수정 버튼과 동일 위치; 서로 다른 섹션에서 보이므로 겹치지 않음) -->
+<button id="btn-log-save" class="fixed-btn">기록 저장</button>
 
 <script>
-let editable=false;
-let idCounter = 0;
-
 /* ---------------------------
-   권한 설정
+   환경: 사용자 권한 설정
    --------------------------- */
-const allowedUsers = ['admin','manager']; // 허용할 사용자 이름
-let currentUser = prompt("사용자 이름을 입력하세요:");
+let editable = false;
+let idCounter = 0;
+const allowedUsers = ['admin','manager']; // 관리자/매니저가 내전 섹션 접근 가능
+let currentUser = prompt("사용자 이름을 입력하세요:") || '';
+// 메뉴 표시: 내전 기록 메뉴 자체를 비관리자에겐 숨김
 if(!allowedUsers.includes(currentUser)){
-    $('#start-edit-btn').hide(); // 권한 없으면 숨김
+  $('#menu-log').hide();
+  $('#start-edit-btn').hide(); // 편집 버튼 숨김
 }
 
-/* 버튼/섹션 가시성 유지 */
+/* 버튼/섹션 토글 */
 function updateUserEditButtonVisibility(){
   if($('#section-dashboard').is(':visible')){
     if(editable){ $('#start-edit-btn').hide(); $('#edit-users-btn').show(); $('#btn-add-user-bottom').show(); }
     else { if(allowedUsers.includes(currentUser)) $('#start-edit-btn').show(); $('#edit-users-btn').hide(); $('#btn-add-user-bottom').hide(); }
   } else { $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide(); }
+  if($('#section-match').is(':visible')) $('#btn-match').show(); else $('#btn-match').hide();
 
-  if($('#section-match').is(':visible')) $('#btn-match').show();
-  else $('#btn-match').hide();
+  // log save button shown only when log section visible and user allowed
+  if($('#section-log').is(':visible') && allowedUsers.includes(currentUser)) $('#btn-log-save').show();
+  else $('#btn-log-save').hide();
 }
 
 $('nav button').click(function(){
   $('.section').hide();
   if(this.id==='menu-dashboard') $('#section-dashboard').show();
   if(this.id==='menu-match') $('#section-match').show();
+  if(this.id==='menu-log') $('#section-log').show();
+  // init players and logs when log opened
+  if(this.id==='menu-log'){ initPlayers(); loadLogs(); }
   updateUserEditButtonVisibility();
 });
 
-/* DataTable 초기화 (원본 구조 유지) */
+/* ---------------------------
+   DataTable (유저 테이블)
+   --------------------------- */
 var userTable = $('#userTable').DataTable({
-  paging:false,
-  serverSide:false,
-  data:[],
-  autoWidth:false,
+  paging:false, serverSide:false, data:[], autoWidth:false,
   columns:[
     {data:null, render:(d,t,r,m)=> m.row+1},
-    {data:"userName"},
-    {data:"tier"},
-    {data:"rating"},
-    {data:"mainLane"},
-    {data:"subLane"},
-    {data:"matchNumber"},
-    {data:"win"},
-    {data:"loss"},
-    {data:"winRate"},
-    {data:"lastPlayDateSince"},
+    {data:"userName"}, {data:"tier"}, {data:"rating"}, {data:"mainLane"}, {data:"subLane"},
+    {data:"matchNumber"}, {data:"win"}, {data:"loss"}, {data:"winRate"}, {data:"lastPlayDateSince"},
     {data:null, defaultContent:'<button class="delete-btn">삭제</button>', orderable:false}
   ],
-  columnDefs:[
-    { targets: 1, width: '17%', className:'dt-left' },
-    { targets: 4, width: '7%'  },
-    { targets: 5, width: '7%'  },
-    { targets:10, width: '8%'  }
-  ],
-  createdRow: function(row, data){ }
+  columnDefs:[{targets:1,width:'17%',className:'dt-left'},{targets:4,width:'7%'},{targets:5,width:'7%'},{targets:10,width:'8%'}]
 });
 
-/* 승률 계산 */
-function calculateWinRate(win, match){ return match===0?'0%':Math.round((win/match)*100)+'%'; }
-
-/* 티어 계산 */
-function getTierByRating(rating){
-  if(rating>=3000) return '챌린저';
-  if(rating>=2900) return '그마';
-  if(rating>=2800) return '마스터 3';
-  if(rating>=2700) return '마스터 2';
-  if(rating>=2600) return '마스터 1';
-  if(rating>=2500) return '마스터 0';
-  if(rating>=2450) return '다이아 1';
-  if(rating>=2400) return '다이아 2';
-  if(rating>=2350) return '다이아 3';
-  if(rating>=2300) return '다이아 4';
-  if(rating>=2250) return '다이아 5';
-  if(rating>=2200) return '에메랄드 1';
-  if(rating>=2150) return '에메랄드 2';
-  if(rating>=2100) return '에메랄드 3';
-  if(rating>=2050) return '에메랄드 4';
-  if(rating>=2000) return '에메랄드 5';
-  if(rating>=1950) return '플레티넘 1';
-  if(rating>=1900) return '플레티넘 2';
-  if(rating>=1850) return '플레티넘 3';
-  if(rating>=1800) return '플레티넘 4';
-  if(rating>=1750) return '플레티넘 5';
-  if(rating>=1700) return '골드 1';
-  if(rating>=1650) return '골드 2';
-  if(rating>=1600) return '골드 3';
-  if(rating>=1550) return '골드 4';
-  if(rating>=1500) return '골드 5';
-  if(rating>=1450) return '실버 1';
-  if(rating>=1400) return '실버 2';
-  if(rating>=1350) return '실버 3';
-  if(rating>=1300) return '실버 4';
-  if(rating>=1250) return '실버 5';
-  if(rating>=1200) return '브론즈 1';
-  if(rating>=1150) return '브론즈 2';
-  if(rating>=1100) return '브론즈 3';
-  if(rating>=1050) return '브론즈 4';
-  if(rating>=1000) return '브론즈 5';
-  return '아이언';
+/* 유틸 함수: 승률, 티어, 색상 적용 */
+function calculateWinRate(win, match){ return match===0 ? '0%' : Math.round((win/match)*100)+'%'; }
+function getTierByRating(r){
+  if(!r) return '아이언';
+  const rating = Number(r);
+  if(rating>=3000) return '챌린저'; if(rating>=2900) return '그마';
+  if(rating>=2800) return '마스터 3'; if(rating>=2700) return '마스터 2'; if(rating>=2600) return '마스터 1';
+  if(rating>=2500) return '마스터 0'; if(rating>=2450) return '다이아 1'; if(rating>=2400) return '다이아 2';
+  if(rating>=2350) return '다이아 3'; if(rating>=2300) return '다이아 4'; if(rating>=2250) return '다이아 5';
+  if(rating>=2200) return '에메랄드 1'; if(rating>=2150) return '에메랄드 2'; if(rating>=2100) return '에메랄드 3';
+  if(rating>=2050) return '에메랄드 4'; if(rating>=2000) return '에메랄드 5'; if(rating>=1950) return '플레티넘 1';
+  if(rating>=1900) return '플레티넘 2'; if(rating>=1850) return '플레티넘 3'; if(rating>=1800) return '플레티넘 4';
+  if(rating>=1750) return '플레티넘 5'; if(rating>=1700) return '골드 1'; if(rating>=1650) return '골드 2';
+  if(rating>=1600) return '골드 3'; if(rating>=1550) return '골드 4'; if(rating>=1500) return '골드 5';
+  if(rating>=1450) return '실버 1'; if(rating>=1400) return '실버 2'; if(rating>=1350) return '실버 3';
+  if(rating>=1300) return '실버 4'; if(rating>=1250) return '실버 5'; if(rating>=1200) return '브론즈 1';
+  if(rating>=1150) return '브론즈 2'; if(rating>=1100) return '브론즈 3'; if(rating>=1050) return '브론즈 4';
+  if(rating>=1000) return '브론즈 5'; return '아이언';
 }
-
-/* 티어 색상 적용 */
 function applyTierColors(){
   $('#userTable tbody tr').each(function(){
-    let tierCell=$(this).find('td').eq(2);
-    let tier=tierCell.text().trim();
-    let bg='#2a2a2a', color='#f0f0f0';
-    if(tier.includes('아이언')) bg='#FFFFFF', color='#121212';
-    else if(tier.includes('브론즈')) bg='#DEB84F', color='#121212';
-    else if(tier.includes('실버')) bg='#BDBDBD', color='#fff';
-    else if(tier.includes('골드')) bg='#FAED7D', color='#121212';
-    else if(tier.includes('플레티넘')) bg='#ABF200', color='#121212';
-    else if(tier.includes('에메랄드')) bg='#2FED28', color='#121212';
-    else if(tier.includes('다이아')) bg='#00D8FF', color='#121212';
-    else if(tier.includes('마스터')) bg='#C98AFF', color='#121212';
-    else if(tier.includes('그마')) bg='#FF3636', color='#fff';
-    else if(tier.includes('챌린저')) bg='linear-gradient(to right,#ffd700,#1e90ff)', color='#121212';
+    let $td = $(this).find('td').eq(2), tier = $td.text().trim(), bg='#2a2a2a', color='#f0f0f0';
+    if(tier.includes('아이언')) { bg='#fff'; color='#121212'; }
+    else if(tier.includes('브론즈')) { bg='#DEB84F'; color='#121212'; }
+    else if(tier.includes('실버')) { bg='#BDBDBD'; color='#121212'; }
+    else if(tier.includes('골드')) { bg='#FAED7D'; color='#121212'; }
+    else if(tier.includes('플레티넘')) { bg='#ABF200'; color='#121212'; }
+    else if(tier.includes('에메랄드')) { bg='#2FED28'; color='#121212'; }
+    else if(tier.includes('다이아')) { bg='#00D8FF'; color='#121212'; }
+    else if(tier.includes('마스터')) { bg='#C98AFF'; color='#f0f0f0'; }
+    else if(tier.includes('그마')) { bg='#FF3636'; color='#f0f0f0'; }
+    else if(tier.includes('챌린저')) { bg='linear-gradient(to right,#ffd700,#1e90ff)'; color='#f0f0f0'; }
 
-    if(tier.includes('챌린저')) tierCell.css({'background':bg,'color':color,'font-weight':'600'});
-    else tierCell.css({'background-color':bg,'color':color,'font-weight':'600'});
+    if(tier.includes('챌린저')) $td.css({'background':bg,'color':color,'font-weight':'600'});
+    else $td.css({'background-color':bg,'color':color,'font-weight':'600'});
   });
 }
 
 /* 로컬 저장/불러오기 */
 function loadUsersFromLocalStorage(){
-  let users=JSON.parse(localStorage.getItem('users'))||[];
-  // assign ids if missing and maintain idCounter
+  let users = JSON.parse(localStorage.getItem('users')||'[]');
   users.forEach(u=>{
-    if(!u.userId){
-      idCounter = Math.max(idCounter, Date.now());
-      u.userId = ++idCounter;
-    } else {
-      idCounter = Math.max(idCounter, Number(u.userId));
-    }
+    if(!u.userId) { idCounter = Math.max(idCounter, Date.now()); u.userId = ++idCounter; }
+    else idCounter = Math.max(idCounter, Number(u.userId));
   });
   userTable.clear();
   users.forEach(u=>{
-    u.matchNumber=(u.win||0)+(u.loss||0);
-    u.winRate=calculateWinRate(u.win||0, u.matchNumber);
-    u.tier=getTierByRating(u.rating||0);
+    u.matchNumber = (u.win||0) + (u.loss||0);
+    u.winRate = calculateWinRate(u.win||0, u.matchNumber);
+    u.tier = getTierByRating(u.rating||0);
     userTable.row.add(u);
   });
   userTable.draw();
@@ -264,278 +268,333 @@ function loadUsersFromLocalStorage(){
   applyTierColors();
 }
 function saveUsersToLocalStorage(){
-  let users=userTable.rows().data().toArray();
+  let users = userTable.rows().data().toArray();
   users.forEach(u=>{
-    u.matchNumber = (u.win||0) + (u.loss||0);
+    u.matchNumber = (u.win||0)+(u.loss||0);
     u.winRate = calculateWinRate(u.win||0, u.matchNumber);
     u.tier = getTierByRating(u.rating||0);
-    if(!u.userId) { idCounter = Math.max(idCounter, Date.now()); u.userId = ++idCounter; }
+    if(!u.userId){ idCounter = Math.max(idCounter, Date.now()); u.userId = ++idCounter; }
   });
-  localStorage.setItem('users',JSON.stringify(users));
+  localStorage.setItem('users', JSON.stringify(users));
   userTable.rows().invalidate().draw(false);
   updateDeleteButtons();
   applyTierColors();
 }
 
-/* 유저 추가: 즉시 추가 (팝업 없음), 필수 필드 사전 계산 */
+/* 유저 추가 */
 $('#btn-add-user-bottom').off('click').on('click', function(){
-  // determine new unique id
   idCounter = Math.max(idCounter, Date.now());
   let newId = ++idCounter;
-  // default values (same structure as others)
-  let newUser = {
-    userId: newId,
-    userName: '이름',
-    rating: 1000,
-    mainLane: '-',
-    subLane: '-',
-    win: 0,
-    loss: 0,
-    lastPlayDateSince: '-'
-  };
-  newUser.matchNumber = (newUser.win||0)+(newUser.loss||0);
-  newUser.winRate = calculateWinRate(newUser.win, newUser.matchNumber);
-  newUser.tier = getTierByRating(newUser.rating||0);
+  let newUser = { userId:newId, userName:'이름', rating:1000, mainLane:'-', subLane:'-', win:0, loss:0, lastPlayDateSince:'-' };
+  newUser.matchNumber = 0; newUser.winRate = calculateWinRate(0,0); newUser.tier = getTierByRating(newUser.rating);
   userTable.row.add(newUser).draw(false);
   saveUsersToLocalStorage();
-  initPlayers();
-  applyTierColors();
 });
 
-/* 편집 모드 토글 및 버튼 가시성 */
-$('#start-edit-btn').off('click').on('click',function(){
-  editable=true;
-  updateUserEditButtonVisibility();
-  updateDeleteButtons();
-});
-$('#edit-users-btn').off('click').on('click',function(){
-  editable=false;
-  saveUsersToLocalStorage();
-  updateUserEditButtonVisibility();
-  updateDeleteButtons();
-});
+/* 편집 모드 */
+$('#start-edit-btn').off('click').on('click', function(){ editable=true; updateUserEditButtonVisibility(); updateDeleteButtons(); });
+$('#edit-users-btn').off('click').on('click', function(){ editable=false; saveUsersToLocalStorage(); updateUserEditButtonVisibility(); updateDeleteButtons(); });
 
-/* 삭제 버튼 표시/숨김 */
+/* 삭제 버튼 표시 */
 function updateDeleteButtons(){
-  $('#userTable tbody tr').each(function(){
-    let $btn = $(this).find('.delete-btn');
-    if(editable) $btn.show();
-    else $btn.hide();
-  });
+  $('#userTable tbody tr').each(function(){ let $btn = $(this).find('.delete-btn'); editable ? $btn.show() : $btn.hide(); });
 }
-
-/* 삭제 버튼: 위임 바인딩 -> 동적 요소 작동 */
-$('#userTable tbody').off('click', '.delete-btn').on('click', '.delete-btn', function(e){
+$('#userTable tbody').off('click', '.delete-btn').on('click','.delete-btn', function(){
   if(!editable) return;
   if(!confirm('정말 삭제하시겠습니까?')) return;
-  let row = userTable.row($(this).closest('tr'));
-  row.remove().draw(false);
+  userTable.row($(this).closest('tr')).remove().draw(false);
   saveUsersToLocalStorage();
-  initPlayers();
 });
 
-/* 셀 직접 편집 기능 (원본 복구) */
+/* 테이블 셀 직접 편집 (간단 구현) */
 $('#userTable').off('click','td').on('click','td', function(){
   if(!editable) return;
   let cell = userTable.cell(this);
-  // if cell is in header or invalid, return
   if(!cell.index()) return;
   let colIdx = cell.index().column;
-  // Prevent editing for columns: No(0), tier(2), matchNumber(6), winRate(9), menu(11)
-  if(colIdx===0 || colIdx===2 || colIdx===6 || colIdx===9 || colIdx===11) return;
-  let originalValue = cell.data();
-  // create input
-  let $input = $('<input type="text">').val(originalValue);
-  if(colIdx===3 || colIdx===7 || colIdx===8) $input.attr('type','number').attr('min',0);
-  $(this).html($input);
-  $(this).closest('tr').addClass('editing');
-  $input.focus();
-  function finishEdit(){
+  if([0,2,6,9,11].includes(colIdx)) return; // 수정 금지 열
+  let orig = cell.data();
+  let $input = $('<input>').val(orig);
+  if([3,7,8].includes(colIdx)) $input.attr('type','number').attr('min',0);
+  $(this).html($input); $(this).closest('tr').addClass('editing'); $input.focus();
+  function finish(){
     let val = $input.val();
-    if(colIdx===3 || colIdx===7 || colIdx===8){
-      val = val === '' ? 0 : Number(val);
-      if(isNaN(val)) val = 0;
-    }
-    cell.data(val).draw(false);
-    $(cell.node()).closest('tr').removeClass('editing');
-    // update related stats
-    let rowIdx = cell.index().row;
-    updateStatsIfNeeded(colIdx, rowIdx);
+    if([3,7,8].includes(colIdx)){ val = val===''?0: Number(val); if(isNaN(val)) val = 0; }
+    cell.data(val).draw(false); $(cell.node()).closest('tr').removeClass('editing');
+    updateStatsIfNeeded(colIdx, cell.index().row);
   }
-  $input.on('blur', finishEdit);
-  $input.on('keydown', function(e){
-    if(e.key==='Enter') { finishEdit(); }
-    if(e.key==='Escape') { cell.data(originalValue).draw(false); $(cell.node()).closest('tr').removeClass('editing'); }
-  });
+  $input.on('blur', finish).on('keydown', function(e){ if(e.key==='Enter') finish(); if(e.key==='Escape'){ cell.data(orig).draw(false); $(cell.node()).closest('tr').removeClass('editing'); }});
 });
 
-/* 업데이트 후 통계 재계산 */
 function updateStatsIfNeeded(colIdx, rowIdx){
   let data = userTable.row(rowIdx).data();
-  data.win = parseInt(data.win) || 0;
-  data.loss = parseInt(data.loss) || 0;
-  data.matchNumber = data.win + data.loss;
-  data.winRate = calculateWinRate(data.win, data.matchNumber);
-  if(colIdx===3){
-    data.tier = getTierByRating(parseInt(data.rating)||0);
-  }
+  data.win = parseInt(data.win)||0; data.loss = parseInt(data.loss)||0;
+  data.matchNumber = data.win + data.loss; data.winRate = calculateWinRate(data.win, data.matchNumber);
+  if(colIdx===3) data.tier = getTierByRating(parseInt(data.rating)||0);
   userTable.row(rowIdx).data(data).invalidate().draw(false);
-  updateDeleteButtons();
-  applyTierColors();
+  updateDeleteButtons(); applyTierColors();
 }
 
 /* ---------------------------
-   Select2 초기화 및 중복 선택 방지 로직
+   Select2 초기화 & 중복 선택 방지
    --------------------------- */
-
-/* refreshMatchSelectOptions:
-   - 현재 모든 match-p select의 선택값을 읽음
-   - 각 select별로 '선택 가능' 옵션만 남기고 (자기 자신은 항상 포함)
-   - select2를 재생성하여 UI 갱신
-*/
+function buildSelects(containerId, className, count){
+  const $cont = $('#' + containerId);
+  $cont.empty();
+  for(let i=1;i<=count;i++){
+    $cont.append(`<select class="${className}" id="${containerId}-${i}"></select>`);
+  }
+}
 function refreshMatchSelectOptions(){
   let users = userTable.rows().data().toArray();
-  // gather currently selected ids (strings)
-  let selected = $('.match-p').map(function(){ return $(this).val(); }).get().filter(v=>v!=='' && v!=null);
-  let selectedSet = new Set(selected.map(String));
-
+  let selected = $('.match-p').map(function(){ return $(this).val(); }).get().filter(v=>v).map(String);
+  let selectedSet = new Set(selected);
   $('.match-p').each(function(){
-    let sel = $(this);
-    let curVal = sel.val();
-    // destroy select2 to safely modify options
+    let sel = $(this), curVal = sel.val();
     if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
-    sel.empty();
-    sel.append('<option value=""></option>');
-    users.forEach(u=>{
-      // include option if:
-      // - not currently selected elsewhere OR
-      // - it's the current value of this select (so user can keep their selection)
-      if(!selectedSet.has(String(u.userId)) || String(u.userId) === String(curVal)){
-        sel.append($('<option>').val(u.userId).text(u.userName));
-      }
-    });
-    // restore value
-    sel.val(curVal||'');
-    // re-init select2
-    sel.select2({ placeholder:'선수 선택', width:'100%', allowClear:true });
+    sel.empty().append('<option value=""></option>');
+    users.forEach(u=>{ if(!selectedSet.has(String(u.userId)) || String(u.userId)===String(curVal)) sel.append($('<option>').val(u.userId).text(u.userName)); });
+    sel.val(curVal||'').select2({placeholder:'선수 선택',width:'100%',allowClear:true});
   });
 }
-
-/* initPlayers: 기존 초기화 유지 + 중복 방지 바인딩
-   - rebuilds options for both match-p and log-p
-   - then calls refreshMatchSelectOptions to remove already selected users from other selects
-   - binds change event on .match-p to refresh options on selection change
-*/
-function initPlayers(){
-  let users=userTable.rows().data().toArray();
-  // initialize log-p selects (no uniqueness constraint)
+/* 새로 추가: 로그 섹션의 select 들에 대해서도 중복 선택 방지 */
+function refreshLogSelectOptions(){
+  let users = userTable.rows().data().toArray();
+  let selected = $('.log-p').map(function(){ return $(this).val(); }).get().filter(v=>v).map(String);
+  let selectedSet = new Set(selected);
   $('.log-p').each(function(){
-    let sel = $(this);
-    let val = sel.val();
+    let sel = $(this), curVal = sel.val();
     if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
-    sel.empty();
-    sel.append('<option value=""></option>');
-    users.forEach(u=> sel.append($('<option>').val(u.userId).text(u.userName)));
-    sel.val(val||'');
-    sel.select2({ placeholder:'선수 선택', width:'100%', allowClear:true });
-  });
-
-  // initialize match-p selects (we'll call refresh to enforce uniqueness)
-  $('.match-p').each(function(){
-    let sel = $(this);
-    if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
-    sel.empty();
-    sel.append('<option value=""></option>');
-    users.forEach(u=> sel.append($('<option>').val(u.userId).text(u.userName)));
-    sel.val('');
-    sel.select2({ placeholder:'선수 선택', width:'100%', allowClear:true });
-  });
-
-  // ensure uniqueness immediately
-  refreshMatchSelectOptions();
-
-  // bind change to update other selects when one changes
-  $('.match-p').off('change.unique').on('change.unique', function(){
-    refreshMatchSelectOptions();
+    sel.empty().append('<option value=""></option>');
+    users.forEach(u=>{ if(!selectedSet.has(String(u.userId)) || String(u.userId)===String(curVal)) sel.append($('<option>').val(u.userId).text(u.userName)); });
+    sel.val(curVal||'').select2({placeholder:'선수 선택',width:'100%',allowClear:true});
   });
 }
 
-/* 팀 매치: 모든 5:5 조합 검사 (원본 기능 보존) */
+function initPlayers(){
+  // build selects if empty
+  if($('#match-team').children().length===0) buildSelects('match-team','match-p',10);
+  if($('#log-players').children().length===0) buildSelects('log-players','log-p',10);
+  let users = userTable.rows().data().toArray();
+  // init log-p (we'll enforce uniqueness using refreshLogSelectOptions)
+  $('.log-p').each(function(){ let sel=$(this); if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy'); sel.empty().append('<option value=""></option>'); users.forEach(u=>sel.append($('<option>').val(u.userId).text(u.userName))); sel.val('').select2({placeholder:'선수 선택',width:'100%',allowClear:true}); });
+  // init match-p then enforce uniqueness
+  $('.match-p').each(function(){ let sel=$(this); if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy'); sel.empty().append('<option value=""></option>'); users.forEach(u=>sel.append($('<option>').val(u.userId).text(u.userName))); sel.val('').select2({placeholder:'선수 선택',width:'100%',allowClear:true}); });
+  // enforce uniqueness for both sets
+  refreshMatchSelectOptions();
+  refreshLogSelectOptions();
+  // bind change to update other selects when one changes
+  $('.match-p').off('change.unique').on('change.unique', refreshMatchSelectOptions);
+  $('.log-p').off('change.unique').on('change.unique', refreshLogSelectOptions);
+}
+
+/* ---------------------------
+   팀 매치 생성 (원본 유지)
+   --------------------------- */
 function generateBalancedTeams(selectedUsers){
   let bestDiff=Infinity, bestTeams=null;
-  function combinations(arr, k) {
-    let results=[];
-    function comb(start, path){
-      if(path.length===k){ results.push(path.slice()); return; }
-      for(let i=start;i<arr.length;i++){ path.push(arr[i]); comb(i+1, path); path.pop(); }
-    }
-    comb(0,[]);
-    return results;
-  }
-  let allComb = combinations(selectedUsers,5);
-  allComb.forEach(teamA=>{
+  function combinations(arr,k){ let res=[]; (function c(s,p){ if(p.length===k){res.push(p.slice());return;} for(let i=s;i<arr.length;i++){p.push(arr[i]); c(i+1,p); p.pop();}})(0,[]); return res; }
+  let comb = combinations(selectedUsers,5);
+  comb.forEach(teamA=>{
     let teamB = selectedUsers.filter(u=>!teamA.includes(u));
-    let sumA = teamA.reduce((s,u)=>s + (parseInt(u.rating||0)), 0);
-    let sumB = teamB.reduce((s,u)=>s + (parseInt(u.rating||0)), 0);
-    let avgA = Math.round(sumA / 5);
-    let avgB = Math.round(sumB / 5);
-    let diff = Math.abs(avgA - avgB);
-    if(diff < bestDiff){
-      bestDiff = diff;
-      bestTeams = { teamA: teamA.slice(), teamB: teamB.slice(), avgA, avgB };
-    }
+    let sumA = teamA.reduce((s,u)=>s+ (parseInt(u.rating||0)),0), sumB = teamB.reduce((s,u)=>s+ (parseInt(u.rating||0)),0);
+    let avgA=Math.round(sumA/5), avgB=Math.round(sumB/5), diff=Math.abs(avgA-avgB);
+    if(diff < bestDiff){ bestDiff=diff; bestTeams={teamA:teamA.slice(),teamB:teamB.slice(),avgA,avgB}; }
   });
   return bestTeams;
 }
-
-/* 매칭 버튼 ('매칭하기') 클릭 - UI for match-result shows Blue/Red with 5 names + avg */
 $('#btn-match').off('click').on('click', function(){
-  let selected = $('.match-p').map(function(){ return $(this).val(); }).get().filter(v=>v!=='' && v!=null);
-  if(selected.length !== 10){ alert('10명을 모두 선택해주세요'); return; }
+  let selected = $('.match-p').map(function(){ return $(this).val(); }).get().filter(v=>v);
+  if(selected.length!==10){ alert('10명을 모두 선택해주세요'); return; }
   let users = userTable.rows().data().toArray();
-  let selectedUsers = selected.map(id => users.find(u=>String(u.userId)==String(id)));
+  let selectedUsers = selected.map(id => users.find(u=>String(u.userId)===String(id)));
   if(selectedUsers.some(u=>!u)){ alert('선택한 유저 중 데이터 누락이 있습니다.'); return; }
   let teams = generateBalancedTeams(selectedUsers);
   if(!teams){ alert('팀을 생성할 수 없습니다.'); return; }
-  let maxRows = 5;
-  let htmlRows = '';
-  for(let i=0;i<maxRows;i++){
-    htmlRows += `<tr><td>${teams.teamA[i]?.userName||''}</td><td>${teams.teamB[i]?.userName||''}</td></tr>`;
-  }
-  htmlRows += `<tr><td>평균 레이팅: ${teams.avgA}</td><td>평균 레이팅: ${teams.avgB}</td></tr>`;
-  $('#match-result tbody').html(htmlRows);
+  let rows=''; for(let i=0;i<5;i++){ rows += `<tr><td>${teams.teamA[i]?.userName||''}</td><td>${teams.teamB[i]?.userName||''}</td></tr>`; }
+  rows += `<tr><td>평균 레이팅: ${teams.avgA}</td><td>평균 레이팅: ${teams.avgB}</td></tr>`;
+  $('#match-result tbody').html(rows);
 });
 
-/* 내전 기록 저장/삭제 (간단 동작 - 로컬에 저장하거나 다른 로직 연결 가능) */
+/* ---------------------------
+   내전 기록 저장 / 최근 기록 표시 (변경점 반영)
+   - 저장: 현재 날짜 사용
+   - 저장 데이터 구조: { date, winners: [...5], losers: [...5] }
+   - loadLogs는 기존 형식(구버전)도 호환
+   --------------------------- */
 $('#btn-log-save').off('click').on('click', function(){
-  // 기본 동작: 입력값 검증 후 간단히 console에 출력 (필요하면 로컬저장 또는 목록추가로 확장)
-  let date = $('#gameDate').val();
-  if(!date){ alert('게임 날짜를 입력해주세요.'); return; }
-  let set1 = $('#set1').val();
-  let set2 = $('#set2').val();
-  let set3 = $('#set3').val();
-  let players = $('.log-p').map(function(){ return $(this).val() || ''; }).get();
-  // 검증: 10명의 선수 중복/누락 체크는 필요시 확장 가능
-  if(players.filter(v=>v!=='').length !== 10){ if(!confirm('선수가 모두 선택되지 않았습니다. 계속 저장하시겠습니까?')) return; }
-  // 현재는 로컬스토리지에 간단히 기록 배열로 저장 (확장가능)
+  if(!allowedUsers.includes(currentUser)){ alert('권한이 없습니다'); return; }
+  const date = new Date().toISOString().slice(0,10);
+  // log-players 순서: buildSelects('log-players','log-p',10)로 생성되며 grid(2 cols)이고,
+  // 인덱스가 0,2,4,6,8 -> 좌측(승리팀), 1,3,5,7,9 -> 우측(패배팀)
+  const players = $('.log-p').map(function(){ return $(this).val() || ''; }).get();
+  let winners = [], losers = [];
+  for(let i=0;i<players.length;i++){
+    if(i % 2 === 0) winners.push(players[i]); // 0,2,4,6,8
+    else losers.push(players[i]);             // 1,3,5,7,9
+  }
+  // 보장: winners/losers 길이가 5이도록 (부족하면 빈값 채움)
+  while(winners.length < 5) winners.push('');
+  while(losers.length  < 5) losers.push('');
+
+  if(players.filter(v=>v!=='').length !== 10){
+    if(!confirm('선수가 모두 선택되지 않았습니다. 계속 저장하시겠습니까?')) return;
+  }
   let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
-  logs.push({ date, set1, set2, set3, players });
+  let users = userTable.rows().data().toArray(); // 현재 대시보드 유저 데이터 가져오기
+
+// 승리팀 적용
+winners.forEach(id=>{
+    let user = users.find(u => String(u.userId) === String(id));
+    if(user){
+        user.rating = (parseInt(user.rating)||0) + 10; 
+        user.win = (parseInt(user.win)||0) + 1;
+    }
+});
+
+// 패배팀 적용
+losers.forEach(id=>{
+    let user = users.find(u => String(u.userId) === String(id));
+    if(user){
+        user.rating = (parseInt(user.rating)||0) - 10;
+        user.loss = (parseInt(user.loss)||0) + 1; // 패배 +1
+        if(user.loss < 0) user.loss = 0; // 최소값 0 유지
+    }
+});
+
+// 변경 사항을 테이블에 반영
+userTable.rows().invalidate().draw(false);
+saveUsersToLocalStorage();
+
+  logs.push({date, winners, losers});
   localStorage.setItem('matchLogs', JSON.stringify(logs));
   alert('기록이 저장되었습니다.');
+  loadLogs();
 });
 
-$('#btn-log-delete').off('click').on('click', function(){
-  if(confirm('최근 기록을 삭제하시겠습니까?')) {
-    let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
-    if(logs.length>0){ logs.pop(); localStorage.setItem('matchLogs', JSON.stringify(logs)); alert('최근 기록이 삭제되었습니다.'); }
-    else alert('삭제할 기록이 없습니다.');
+/* 메뉴 복제용: 주어진 값(아이디 또는 이름)에서 대시보드의 메뉴 버튼 HTML 생성 */
+function getMenuForVal(val){
+  if(!val) return `<div style="color:#777;margin-bottom:6px">(미선택)</div>`;
+  let users = userTable.rows().data().toArray();
+  // 먼저 userId로 찾기
+  let found = users.find(u => String(u.userId) === String(val));
+  if(!found){
+    // 이름으로도 시도
+    found = users.find(u => String(u.userName) === String(val));
   }
-});
+  if(found){
+    // 대시보드 메뉴 기본 컨텐츠를 본따 생성 (삭제 버튼)
+    // 로그쪽 버튼은 클래스(log-delete)를 추가하여 동작 제어
+    return `<div style="margin-bottom:6px"><button class="delete-btn log-delete" data-userid="${found.userId}">삭제</button></div>`;
+  } else {
+    return `<div style="color:#777;margin-bottom:6px">(대시보드 없음)</div>`;
+  }
+}
+
+function loadLogs(){
+  let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
+  if(!logs || logs.length===0){
+    $('#log-result tbody').html('<tr><td colspan="4" style="text-align:center">저장된 기록이 없습니다.</td></tr>');
+    return;
+  }
+  let rows = '';
+  // logs 배열을 역순으로 출력 (최신이 위)
+  for(let i = logs.length-1; i >= 0; i--){
+    const lg = logs[i];
+    let dateText = lg.date || '';
+    let winnersArr = [], losersArr = [];
+    if(Array.isArray(lg.winners) && Array.isArray(lg.losers)){
+      winnersArr = lg.winners;
+      losersArr  = lg.losers;
+    } else if(Array.isArray(lg.players)){
+      winnersArr = (lg.players || []).slice(0,5);
+      losersArr  = (lg.players || []).slice(5,10);
+    }
+
+    // id 또는 이름 -> 사용자명으로 바꿔주는 내부 함수 (기존과 동일)
+    function resolveName(val){
+      if(!val) return '(미선택)';
+      let found = userTable.rows().data().toArray().find(u => String(u.userId) === String(val));
+      if(found) return found.userName;
+      found = userTable.rows().data().toArray().find(u => u.userName === val);
+      if(found) return found.userName;
+      return val;
+    }
+
+    const winnersNames = (winnersArr || []).map(resolveName);
+    const losersNames  = (losersArr  || []).map(resolveName);
+
+    const winnersHTML = winnersNames.map(n => `<span class="winner-pill">${n}</span>`).join(' ');
+    const losersHTML  = losersNames.map(n  => `<span class="loser-pill">${n}</span>`).join(' ');
+
+    // **레코드 단위 삭제 버튼(항상 보이는 버튼)**: 로그 배열에서의 인덱스(i)를 data-log-index로 둠
+    const recordDeleteBtn = `<div style="margin-bottom:6px"><button class="log-record-delete" data-log-index="${i}">기록 삭제</button></div>`;
+
+    // 기존에 구성하던 유저별 메뉴(대시보드 메뉴 복제)는 유지
+    const perUserMenus = (winnersArr || []).map(v => getMenuForVal(v)).join('') +
+                         '<div style="height:6px;border-top:1px solid #444;margin:6px 0"></div>' +
+                         (losersArr || []).map(v => getMenuForVal(v)).join('');
+
+    const perUserMenusClean = (winnersArr || []).map(v => getMenuForVal(v)).join('') +
+                              (losersArr || []).map(v => getMenuForVal(v)).join('');
+    const menusHTML = recordDeleteBtn + perUserMenusClean;
+
+    rows += `<tr>
+      <td style="vertical-align:top">${dateText}</td>
+      <td style="vertical-align:top">${winnersHTML}</td>
+      <td style="vertical-align:top">${losersHTML}</td>
+      <td style="vertical-align:top">${menusHTML}</td>
+    </tr>`;
+  }
+
+  $('#log-result tbody').html(rows);
+
+  // --- 레코드 삭제 버튼 이벤트 바인딩 ---
+  $('#log-result').off('click', '.log-record-delete').on('click', '.log-record-delete', function(){
+    if(!allowedUsers.includes(currentUser)){
+      alert('권한이 없습니다');
+      return;
+    }
+    if(!confirm('이 기록을 삭제하시겠습니까?')) return;
+    const idx = Number($(this).data('log-index'));
+    let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
+    if(isNaN(idx) || idx < 0 || idx >= logs.length){
+      console.warn('invalid log index', idx);
+      loadLogs();
+      return;
+    }
+    logs.splice(idx, 1); // 해당 항목 삭제
+    localStorage.setItem('matchLogs', JSON.stringify(logs));
+    loadLogs(); // 다시 렌더
+  });
+
+  // --- (기존) 로그 내 유저 삭제 버튼(대시보드 유저 삭제 연동)도 그대로 유지 ---
+  $('#log-result').off('click', '.log-delete').on('click', '.log-delete', function(){
+    const uid = $(this).data('userid');
+    if(!allowedUsers.includes(currentUser)){
+      alert('권한이 없습니다');
+      return;
+    }
+    if(!editable){
+      alert('유저 삭제는 편집 모드에서만 가능합니다. 먼저 "유저 수정"을 눌러 편집 모드로 전환하세요.');
+      return;
+    }
+    if(!confirm('대시보드에서 해당 유저를 삭제하시겠습니까?')) return;
+    userTable.rows(function(idx, data, node){
+      return String(data.userId) === String(uid);
+    }).remove().draw(false);
+    saveUsersToLocalStorage();
+    loadLogs();
+  });
+}
+
 
 /* 초기 로드 */
 $(document).ready(function(){
   loadUsersFromLocalStorage();
   updateUserEditButtonVisibility();
+  // hide log save until log menu opened (nav handles show)
+  $('#btn-log-save').hide();
 });
 </script>
 
