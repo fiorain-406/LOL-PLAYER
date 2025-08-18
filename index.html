@@ -12,10 +12,9 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
+import { getFirestore, collection, doc, setDoc, getDocs, writeBatch, addDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
@@ -27,9 +26,8 @@ const firebaseConfig = {
   databaseURL: "https://lol-player-8f92b-default-rtdb.firebaseio.com"
 };
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-window.firebaseDB = db; // 전역에서 접근 가능하게
+const firestore = getFirestore(app);
+window.firestoreDB = firestore;
 </script>
 
 <style>
@@ -223,34 +221,44 @@ function applyTierColors(){
   });
 }
 
-function loadUsersFromLocalStorage(){
-  let users = JSON.parse(localStorage.getItem('users')||'[]');
-  users.forEach(u=>{ u.userId = u.userId || ++idCounter; idCounter = Math.max(idCounter,u.userId); });
-  userTable.clear();
-  users.forEach(u=>{
-    u.matchNumber = (u.win||0) + (u.loss||0);
-    u.winRate = calculateWinRate(u.win||0, u.matchNumber);
-    u.tier = getTierByRating(u.rating||0);
-    userTable.row.add(u);
-  });
-  userTable.draw();
-  initPlayers();
-  updateDeleteButtons();
-  applyTierColors();
+async function loadUsersFromLocalStorage(){
+  try {
+    const q = query(collection(window.firestoreDB, 'users'));
+    const snap = await getDocs(q);
+    const users = snap.docs.map(d => d.data());
+    users.forEach(u=>{ u.userId = u.userId || ++idCounter; idCounter = Math.max(idCounter, Number(u.userId)); });
+    userTable.clear();
+    users.forEach(u=>{
+      u.matchNumber = (u.win||0) + (u.loss||0);
+      u.winRate = calculateWinRate(u.win||0, u.matchNumber);
+      u.tier = getTierByRating(u.rating||0);
+      userTable.row.add(u);
+    });
+    userTable.draw();
+    initPlayers();
+    updateDeleteButtons();
+    applyTierColors();
+  } catch(e) {
+    console.error('load users error', e);
+  }
 }
 
-function saveUsersToLocalStorage(){
-  let users = userTable.rows().data().toArray();
-  users.forEach(u=>{
-    u.matchNumber = (u.win||0)+(u.loss||0);
-    u.winRate = calculateWinRate(u.win||0, u.matchNumber);
-    u.tier = getTierByRating(u.rating||0);
-    u.userId = u.userId || ++idCounter;
-  });
-  localStorage.setItem('users', JSON.stringify(users));
-  userTable.rows().invalidate().draw(false);
-  updateDeleteButtons();
-  applyTierColors();
+async function saveUsersToLocalStorage(){
+  try {
+    const users = userTable.rows().data().toArray();
+    const batch = writeBatch(window.firestoreDB);
+    users.forEach(u=>{
+      u.matchNumber = (u.win||0)+(u.loss||0);
+      u.winRate = calculateWinRate(u.win||0, u.matchNumber);
+      u.tier = getTierByRating(u.rating||0);
+      u.userId = u.userId || ++idCounter;
+      const ref = doc(window.firestoreDB, 'users', String(u.userId));
+      batch.set(ref, u);
+    });
+    await batch.commit();
+  } catch(e) {
+    console.error('save users error', e);
+  }
 }
 
 $('#btn-add-user-bottom').off('click').on('click', function(){
@@ -328,9 +336,6 @@ function initPlayers(){
   $('.log-p').off('change.unique').on('change.unique', ()=>refreshSelectOptions('.log-p'));
 }
 
-/* ---------------------------
-   팀 매치 생성 (원본 유지)
-   --------------------------- */
 function generateBalancedTeams(selectedUsers){
   let bestDiff=Infinity, bestTeams=null;
   function combinations(arr,k){ let res=[]; (function c(s,p){ if(p.length===k){res.push(p.slice());return;} for(let i=s;i<arr.length;i++){p.push(arr[i]); c(i+1,p); p.pop();}})(0,[]); return res; }
@@ -377,7 +382,7 @@ function getMenuForVal(val){
               : `<div style="color:#777;margin-bottom:6px">(대시보드 없음)</div>`;
 }
 
-$('#btn-log-save').off('click').on('click', function(){
+$('#btn-log-save').off('click').on('click', async function(){
   if(!allowedUsers.includes(currentUser)) return alert('권한이 없습니다');
   
   const date = new Date().toISOString().slice(0,10);
@@ -391,58 +396,71 @@ $('#btn-log-save').off('click').on('click', function(){
   losers.forEach(id=>{ let u=users.find(u=>String(u.userId)===String(id)); if(u){ u.rating=(+u.rating||0)-10; u.loss=(+u.loss||0)+1; if(u.loss<0) u.loss=0; }});
 
   userTable.rows().invalidate().draw(false);
-  saveUsersToLocalStorage();
+  await saveUsersToLocalStorage();
 
-  let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
-  logs.push({date,winners,losers});
-  localStorage.setItem('matchLogs', JSON.stringify(logs));
-  alert('기록이 저장되었습니다.');
-  loadLogs();
+  try {
+    await addDoc(collection(window.firestoreDB, 'matchLogs'), { date, winners, losers });
+    alert('기록이 저장되었습니다.');
+    loadLogs();
+  } catch(e) {
+    console.error('save log error', e);
+    alert('기록 저장 중 오류가 발생했습니다.');
+  }
 });
 
-function loadLogs(){
-  let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
-  if(!logs.length) return $('#log-result tbody').html('<tr><td colspan="4" style="text-align:center">저장된 기록이 없습니다.</td></tr>');
+async function loadLogs(){
+  try {
+    const q = query(collection(window.firestoreDB, 'matchLogs'), orderBy('date', 'desc'));
+    const snap = await getDocs(q);
+    const logs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if(!logs.length) return $('#log-result tbody').html('<tr><td colspan="4" style="text-align:center">저장된 기록이 없습니다.</td></tr>');
 
-  const rows = logs.map((lg,i)=>{
-    const {winners, losers} = Array.isArray(lg.winners) && Array.isArray(lg.losers) ? lg 
-                                : {winners: (lg.players||[]).slice(0,5), losers:(lg.players||[]).slice(5,10)};
-    const winnersHTML = winners.map(resolveName).map(n=>`<span class="winner-pill">${n}</span>`).join(' ');
-    const losersHTML  = losers.map(resolveName).map(n=>`<span class="loser-pill">${n}</span>`).join(' ');
-    const recordDeleteBtn = `<div style="margin-bottom:6px"><button class="log-record-delete" data-log-index="${i}">기록 삭제</button></div>`;
-    const perUserMenus = winners.concat(losers).map(getMenuForVal).join('');
-    return `<tr><td style="vertical-align:top">${lg.date||''}</td><td>${winnersHTML}</td><td>${losersHTML}</td><td>${recordDeleteBtn+perUserMenus}</td></tr>`;
-  }).reverse().join('');
+    const rows = logs.map((lg,i)=>{
+      const {winners, losers} = lg;
+      const winnersHTML = winners.map(resolveName).map(n=>`<span class="winner-pill">${n}</span>`).join(' ');
+      const losersHTML  = losers.map(resolveName).map(n=>`<span class="loser-pill">${n}</span>`).join(' ');
+      const recordDeleteBtn = `<div style="margin-bottom:6px"><button class="log-record-delete" data-log-id="${lg.id}">기록 삭제</button></div>`;
+      const perUserMenus = winners.concat(losers).map(getMenuForVal).join('');
+      return `<tr><td style="vertical-align:top">${lg.date||''}</td><td>${winnersHTML}</td><td>${losersHTML}</td><td>${recordDeleteBtn+perUserMenus}</td></tr>`;
+    }).join('');
 
-  $('#log-result tbody').html(rows);
+    $('#log-result tbody').html(rows);
 
-  $('#log-result').off('click', '.log-record-delete').on('click', '.log-record-delete', function(){
-    if(!allowedUsers.includes(currentUser)) return alert('권한이 없습니다');
-    if(!confirm('이 기록을 삭제하시겠습니까?')) return;
-    const idx = +$(this).data('log-index');
-    let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
-    if(idx>=0 && idx<logs.length){ logs.splice(idx,1); localStorage.setItem('matchLogs', JSON.stringify(logs)); loadLogs(); }
-  });
+    $('#log-result').off('click', '.log-record-delete').on('click', '.log-record-delete', async function(){
+      if(!allowedUsers.includes(currentUser)) return alert('권한이 없습니다');
+      if(!confirm('이 기록을 삭제하시겠습니까?')) return;
+      const logId = $(this).data('log-id');
+      try {
+        await deleteDoc(doc(window.firestoreDB, 'matchLogs', logId));
+        loadLogs();
+      } catch(e) {
+        console.error('delete log error', e);
+        alert('기록 삭제 중 오류가 발생했습니다.');
+      }
+    });
 
-  $('#log-result').off('click', '.log-delete').on('click', '.log-delete', function(){
-    const uid = $(this).data('userid');
-    if(!allowedUsers.includes(currentUser)) return alert('권한이 없습니다');
-    if(!editable) return alert('편집 모드에서만 삭제 가능합니다.');
-    if(confirm('대시보드에서 해당 유저를 삭제하시겠습니까?')){
-      userTable.rows((idx,data)=>String(data.userId)===String(uid)).remove().draw(false);
-      saveUsersToLocalStorage();
-      loadLogs();
-    }
-  });
+    $('#log-result').off('click', '.log-delete').on('click', '.log-delete', async function(){
+      const uid = $(this).data('userid');
+      if(!allowedUsers.includes(currentUser)) return alert('권한이 없습니다');
+      if(!editable) return alert('편집 모드에서만 삭제 가능합니다.');
+      if(confirm('대시보드에서 해당 유저를 삭제하시겠습니까?')){
+        userTable.rows((idx,data)=>String(data.userId)===String(uid)).remove().draw(false);
+        await saveUsersToLocalStorage();
+        loadLogs();
+      }
+    });
+  } catch(e) {
+    console.error('load logs error', e);
+  }
 }
 
-$(document).ready(function(){
-  loadUsersFromLocalStorage();
+$(document).ready(async function(){
+  await loadUsersFromLocalStorage();
   updateUserEditButtonVisibility();
-  // hide log save until log menu opened (nav handles show)
   $('#btn-log-save').hide();
 });
 </script>
 
 </body>
 </html>
+
