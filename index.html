@@ -12,8 +12,27 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
+  authDomain: "lol-player-8f92b.firebaseapp.com",
+  projectId: "lol-player-8f92b",
+  storageBucket: "lol-player-8f92b.firebasestorage.app",
+  messagingSenderId: "497657121304",
+  appId: "1:497657121304:web:3c3c8678290d9fff99116d",
+  databaseURL: "https://lol-player-8f92b-default-rtdb.firebaseio.com"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+window.firebaseDB = db; // 전역에서 접근 가능하게
+</script>
+
 <style>
-/* 기본 스타일 (원본 유지 + 로그 테이블 약간 조정) */
 :root{--card:#2a2a2a;--accent1:#ffb347;--accent2:#ff8c42;--text:#f0f0f0;--muted:#555}
 body{font-family:Segoe UI, Tahoma, Geneva, Verdana,sans-serif;background:#222;margin:0;padding:20px;color:var(--text)}
 nav{text-align:center;margin-bottom:30px}
@@ -25,68 +44,31 @@ table.dataTable th, #log-result th, #match-result th{background:linear-gradient(
 table.dataTable td, table.dataTable th, #log-result td, #match-result td{padding:10px;text-align:center;position:relative;border:1px solid #444}
 table.dataTable tbody tr:hover td{background:#ffcc80 !important;color:#121212 !important;transition:background .12s}
 tr.editing td{background:#ffd8a8 !important}
-
 .delete-btn{color:#121212;background:linear-gradient(145deg,var(--accent1),var(--accent2));border:none;padding:4px 8px;border-radius:6px;cursor:pointer;display:none;box-shadow:0 2px 4px rgba(0,0,0,.4);transition:all .2s}
 .delete-btn:hover{background:linear-gradient(145deg,var(--accent2),var(--accent1))}
-
-/* 고정 버튼 스타일 (유저 수정, 추가, 매칭, 기록저장) */
 .fixed-btn{position:fixed;bottom:20px;z-index:1000;padding:12px 20px;border:none;border-radius:10px;font-weight:600;cursor:pointer;box-shadow:0 5px 10px rgba(0,0,0,.5);color:#121212;background:linear-gradient(145deg,var(--accent1),#ffcc80);transition:all .2s}
 .fixed-btn:hover{transform:translateY(-2px);background:linear-gradient(145deg,var(--accent2),var(--accent1))}
-
 #start-edit-btn,#edit-users-btn,#btn-add-user-bottom{right:20px}
 #btn-add-user-bottom{right:200px;display:none}
 #btn-match{right:20px;display:none}
-
-/* 내전 기록 버튼 (우측 하단) - '유저 수정' 버튼 위치와 동일 (겹치지 않음: 서로 다른 섹션에서 보임) */
 #btn-log-save{right:20px; display:none}
-
-/* selects / inputs */
 .team-container select, select.match-p, select.log-p{padding:10px;font-size:16px;border-radius:6px;border:1px solid var(--muted);background:var(--card);color:var(--text);width:100%}
 input[type=text], input[type=number], input[type=date]{padding:6px 8px;border-radius:6px;border:1px solid var(--muted);background:var(--card);color:var(--text)}
 .dataTables_filter{margin-bottom:15px !important}
-
-/* match & log players grid */
 #match-team,#log-players{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:640px;margin:0 auto}
-
-/* 승리팀/패배팀 라벨 라인 */
 #log-players-header{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:640px;margin:0 auto 10px}
 #log-players-header div{text-align:center;font-weight:700;color:var(--text)}
-
-/* 로그 결과는 대시보드와 동일하게 가로 전체 사용 */
 #log-result{max-width:100%;margin:20px 0 0}
 #log-result table td{text-align:left;padding:8px}
-
-/* 최근 기록표 메뉴 열 폭 줄이기 */
-#log-result td:last-child {
-    width: 80px;  /* 원하는 폭으로 조절 */
-    max-width: 80px;
-    word-wrap: break-word;
-}
-
-/* 날짜 컬럼 폭 축소 (요청) */
+#log-result td:last-child { width: 80px; max-width: 80px; word-wrap: break-word; }
 #log-result thead th.date-col { width:150px; max-width:150px; }
-
-/* 로그의 레코드 삭제 버튼 스타일 (선택) */
-.log-record-delete{
-  padding:4px 8px;
-  border-radius:6px;
-  border:none;
-  cursor:pointer;
-  background:linear-gradient(145deg,var(--accent1),var(--accent2));
-  color:#121212;
-  font-weight:600;
-}
-
-/* 승/패 멤버 표시용 pill 스타일 (요청: 하늘색/연붉은색) */
+.log-record-delete{padding:4px 8px;border-radius:6px;border:none;cursor:pointer;background:linear-gradient(145deg,var(--accent1),var(--accent2));color:#121212;font-weight:600}
 .winner-pill{background:#87CEFA;padding:2px 6px;margin:1px;border-radius:4px;display:inline-block;color:#121212}
 .loser-pill{background:#F08080;padding:2px 6px;margin:1px;border-radius:4px;display:inline-block;color:#121212}
-
-/* select2 look */
 .select2-container--default .select2-selection--single{background:var(--card);border:1px solid var(--muted);border-radius:6px;height:44px;box-sizing:border-box}
 .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px;color:var(--text);padding-left:8px}
 .select2-dropdown,.select2-container--default .select2-results > .select2-results__options{background:var(--card);color:var(--text)}
 .select2-results__option[aria-selected="true"],.select2-results__option--highlighted[aria-selected]{background:#ffcc80;color:#121212}
-
 @media (max-width:700px){#match-team,#log-players,#log-players-header{max-width:100%;grid-template-columns:1fr}#btn-add-user-bottom{right:140px}}
 </style>
 </head>
@@ -98,7 +80,6 @@ input[type=text], input[type=number], input[type=date]{padding:6px 8px;border-ra
   <button id="menu-log">내전 기록</button>
 </nav>
 
-<!-- DASHBOARD -->
 <section id="section-dashboard" class="section">
   <table id="userTable" class="display">
     <thead>
@@ -110,7 +91,6 @@ input[type=text], input[type=number], input[type=date]{padding:6px 8px;border-ra
   </table>
 </section>
 
-<!-- MATCH SECTION -->
 <section id="section-match" class="section" style="display:none;">
   <div id="match-team"></div>
   <br>
@@ -125,9 +105,7 @@ input[type=text], input[type=number], input[type=date]{padding:6px 8px;border-ra
   </div>
 </section>
 
-<!-- LOG SECTION -->
 <section id="section-log" class="section" style="display:none;">
-  <!-- 헤더 라벨: 좌 - 승리팀, 우 - 패배팀 -->
   <div id="log-players-header">
     <div>승리팀</div>
     <div>패배팀</div>
@@ -135,8 +113,6 @@ input[type=text], input[type=number], input[type=date]{padding:6px 8px;border-ra
 
   <div id="log-players"></div>
   <br>
-
-  <!-- 세트/날짜 입력 제거 (요청대로) -->
 
   <div id="log-result">
     <h3>최근 기록</h3>
@@ -152,53 +128,53 @@ input[type=text], input[type=number], input[type=date]{padding:6px 8px;border-ra
   </div>
 </section>
 
-<!-- bottom fixed buttons -->
 <button id="start-edit-btn" class="fixed-btn">유저 수정</button>
 <button id="edit-users-btn" class="fixed-btn" style="display:none">유저 수정 완료</button>
 <button id="btn-add-user-bottom" class="fixed-btn" style="display:none">유저 추가</button>
-<!-- 기록 저장 버튼 (우측 하단, 유저 수정 버튼과 동일 위치; 서로 다른 섹션에서 보이므로 겹치지 않음) -->
 <button id="btn-log-save" class="fixed-btn">기록 저장</button>
 
 <script>
-/* ---------------------------
-   환경: 사용자 권한 설정
-   --------------------------- */
 let editable = false;
 let idCounter = 0;
-const allowedUsers = ['admin','manager']; // 관리자/매니저가 내전 섹션 접근 가능
+const allowedUsers = ['admin'];
 let currentUser = prompt("사용자 이름을 입력하세요:") || '';
-// 메뉴 표시: 내전 기록 메뉴 자체를 비관리자에겐 숨김
+
 if(!allowedUsers.includes(currentUser)){
   $('#menu-log').hide();
-  $('#start-edit-btn').hide(); // 편집 버튼 숨김
+  $('#start-edit-btn').hide();
 }
 
-/* 버튼/섹션 토글 */
 function updateUserEditButtonVisibility(){
   if($('#section-dashboard').is(':visible')){
-    if(editable){ $('#start-edit-btn').hide(); $('#edit-users-btn').show(); $('#btn-add-user-bottom').show(); }
-    else { if(allowedUsers.includes(currentUser)) $('#start-edit-btn').show(); $('#edit-users-btn').hide(); $('#btn-add-user-bottom').hide(); }
-  } else { $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide(); }
-  if($('#section-match').is(':visible')) $('#btn-match').show(); else $('#btn-match').hide();
+    if(editable){
+      $('#start-edit-btn').hide();
+      $('#edit-users-btn').show();
+      $('#btn-add-user-bottom').show();
+    } else if(allowedUsers.includes(currentUser)){
+      $('#start-edit-btn').show();
+      $('#edit-users-btn').hide();
+      $('#btn-add-user-bottom').hide();
+    }
+  } else { 
+    $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide(); 
+  }
 
-  // log save button shown only when log section visible and user allowed
-  if($('#section-log').is(':visible') && allowedUsers.includes(currentUser)) $('#btn-log-save').show();
-  else $('#btn-log-save').hide();
+  $('#btn-match').toggle($('#section-match').is(':visible'));
+  $('#btn-log-save').toggle($('#section-log').is(':visible') && allowedUsers.includes(currentUser));
 }
 
 $('nav button').click(function(){
   $('.section').hide();
   if(this.id==='menu-dashboard') $('#section-dashboard').show();
   if(this.id==='menu-match') $('#section-match').show();
-  if(this.id==='menu-log') $('#section-log').show();
-  // init players and logs when log opened
-  if(this.id==='menu-log'){ initPlayers(); loadLogs(); }
+  if(this.id==='menu-log'){ 
+    $('#section-log').show(); 
+    initPlayers(); 
+    loadLogs(); 
+  }
   updateUserEditButtonVisibility();
 });
 
-/* ---------------------------
-   DataTable (유저 테이블)
-   --------------------------- */
 var userTable = $('#userTable').DataTable({
   paging:false, serverSide:false, data:[], autoWidth:false,
   columns:[
@@ -210,8 +186,8 @@ var userTable = $('#userTable').DataTable({
   columnDefs:[{targets:1,width:'17%',className:'dt-left'},{targets:4,width:'7%'},{targets:5,width:'7%'},{targets:10,width:'8%'}]
 });
 
-/* 유틸 함수: 승률, 티어, 색상 적용 */
 function calculateWinRate(win, match){ return match===0 ? '0%' : Math.round((win/match)*100)+'%'; }
+
 function getTierByRating(r){
   if(!r) return '아이언';
   const rating = Number(r);
@@ -229,6 +205,7 @@ function getTierByRating(r){
   if(rating>=1150) return '브론즈 2'; if(rating>=1100) return '브론즈 3'; if(rating>=1050) return '브론즈 4';
   if(rating>=1000) return '브론즈 5'; return '아이언';
 }
+
 function applyTierColors(){
   $('#userTable tbody tr').each(function(){
     let $td = $(this).find('td').eq(2), tier = $td.text().trim(), bg='#2a2a2a', color='#f0f0f0';
@@ -239,22 +216,16 @@ function applyTierColors(){
     else if(tier.includes('플레티넘')) { bg='#ABF200'; color='#121212'; }
     else if(tier.includes('에메랄드')) { bg='#2FED28'; color='#121212'; }
     else if(tier.includes('다이아')) { bg='#00D8FF'; color='#121212'; }
-    else if(tier.includes('마스터')) { bg='#C98AFF'; color='#f0f0f0'; }
-    else if(tier.includes('그마')) { bg='#FF3636'; color='#f0f0f0'; }
-    else if(tier.includes('챌린저')) { bg='linear-gradient(to right,#ffd700,#1e90ff)'; color='#f0f0f0'; }
-
-    if(tier.includes('챌린저')) $td.css({'background':bg,'color':color,'font-weight':'600'});
-    else $td.css({'background-color':bg,'color':color,'font-weight':'600'});
+    else if(tier.includes('마스터')) { bg='#C98AFF'; color='#121212'; }
+    else if(tier.includes('그마')) { bg='#FF3636'; color='#121212'; }
+    else if(tier.includes('챌린저')) { bg='linear-gradient(to right,#ffd700,#1e90ff)'; color='#121212'; }
+    $td.css(tier.includes('챌린저') ? {'background':bg,'color':color,'font-weight':'600'} : {'background-color':bg,'color':color,'font-weight':'600'});
   });
 }
 
-/* 로컬 저장/불러오기 */
 function loadUsersFromLocalStorage(){
   let users = JSON.parse(localStorage.getItem('users')||'[]');
-  users.forEach(u=>{
-    if(!u.userId) { idCounter = Math.max(idCounter, Date.now()); u.userId = ++idCounter; }
-    else idCounter = Math.max(idCounter, Number(u.userId));
-  });
+  users.forEach(u=>{ u.userId = u.userId || ++idCounter; idCounter = Math.max(idCounter,u.userId); });
   userTable.clear();
   users.forEach(u=>{
     u.matchNumber = (u.win||0) + (u.loss||0);
@@ -267,13 +238,14 @@ function loadUsersFromLocalStorage(){
   updateDeleteButtons();
   applyTierColors();
 }
+
 function saveUsersToLocalStorage(){
   let users = userTable.rows().data().toArray();
   users.forEach(u=>{
     u.matchNumber = (u.win||0)+(u.loss||0);
     u.winRate = calculateWinRate(u.win||0, u.matchNumber);
     u.tier = getTierByRating(u.rating||0);
-    if(!u.userId){ idCounter = Math.max(idCounter, Date.now()); u.userId = ++idCounter; }
+    u.userId = u.userId || ++idCounter;
   });
   localStorage.setItem('users', JSON.stringify(users));
   userTable.rows().invalidate().draw(false);
@@ -281,9 +253,7 @@ function saveUsersToLocalStorage(){
   applyTierColors();
 }
 
-/* 유저 추가 */
 $('#btn-add-user-bottom').off('click').on('click', function(){
-  idCounter = Math.max(idCounter, Date.now());
   let newId = ++idCounter;
   let newUser = { userId:newId, userName:'이름', rating:1000, mainLane:'-', subLane:'-', win:0, loss:0, lastPlayDateSince:'-' };
   newUser.matchNumber = 0; newUser.winRate = calculateWinRate(0,0); newUser.tier = getTierByRating(newUser.rating);
@@ -291,101 +261,71 @@ $('#btn-add-user-bottom').off('click').on('click', function(){
   saveUsersToLocalStorage();
 });
 
-/* 편집 모드 */
 $('#start-edit-btn').off('click').on('click', function(){ editable=true; updateUserEditButtonVisibility(); updateDeleteButtons(); });
 $('#edit-users-btn').off('click').on('click', function(){ editable=false; saveUsersToLocalStorage(); updateUserEditButtonVisibility(); updateDeleteButtons(); });
 
-/* 삭제 버튼 표시 */
-function updateDeleteButtons(){
-  $('#userTable tbody tr').each(function(){ let $btn = $(this).find('.delete-btn'); editable ? $btn.show() : $btn.hide(); });
-}
+function updateDeleteButtons(){ $('#userTable tbody tr .delete-btn').toggle(editable); }
+
 $('#userTable tbody').off('click', '.delete-btn').on('click','.delete-btn', function(){
-  if(!editable) return;
-  if(!confirm('정말 삭제하시겠습니까?')) return;
+  if(!editable || !confirm('정말 삭제하시겠습니까?')) return;
   userTable.row($(this).closest('tr')).remove().draw(false);
   saveUsersToLocalStorage();
 });
 
-/* 테이블 셀 직접 편집 (간단 구현) */
 $('#userTable').off('click','td').on('click','td', function(){
   if(!editable) return;
   let cell = userTable.cell(this);
   if(!cell.index()) return;
   let colIdx = cell.index().column;
-  if([0,2,6,9,11].includes(colIdx)) return; // 수정 금지 열
+  if([0,2,6,9,11].includes(colIdx)) return;
   let orig = cell.data();
   let $input = $('<input>').val(orig);
   if([3,7,8].includes(colIdx)) $input.attr('type','number').attr('min',0);
   $(this).html($input); $(this).closest('tr').addClass('editing'); $input.focus();
   function finish(){
     let val = $input.val();
-    if([3,7,8].includes(colIdx)){ val = val===''?0: Number(val); if(isNaN(val)) val = 0; }
+    if([3,7,8].includes(colIdx)){ val = val===''?0:Number(val); if(isNaN(val)) val=0; }
     cell.data(val).draw(false); $(cell.node()).closest('tr').removeClass('editing');
     updateStatsIfNeeded(colIdx, cell.index().row);
   }
-  $input.on('blur', finish).on('keydown', function(e){ if(e.key==='Enter') finish(); if(e.key==='Escape'){ cell.data(orig).draw(false); $(cell.node()).closest('tr').removeClass('editing'); }});
+  $input.on('blur', finish).on('keydown', e=>{ if(e.key==='Enter') finish(); if(e.key==='Escape'){ cell.data(orig).draw(false); $(cell.node()).closest('tr').removeClass('editing'); }});
 });
 
-function updateStatsIfNeeded(colIdx, rowIdx){
-  let data = userTable.row(rowIdx).data();
-  data.win = parseInt(data.win)||0; data.loss = parseInt(data.loss)||0;
-  data.matchNumber = data.win + data.loss; data.winRate = calculateWinRate(data.win, data.matchNumber);
-  if(colIdx===3) data.tier = getTierByRating(parseInt(data.rating)||0);
+function updateStatsIfNeeded(colIdx,rowIdx){
+  let data=userTable.row(rowIdx).data();
+  data.win=parseInt(data.win)||0; data.loss=parseInt(data.loss)||0;
+  data.matchNumber=data.win+data.loss; data.winRate=calculateWinRate(data.win,data.matchNumber);
+  if(colIdx===3) data.tier=getTierByRating(parseInt(data.rating)||0);
   userTable.row(rowIdx).data(data).invalidate().draw(false);
   updateDeleteButtons(); applyTierColors();
 }
 
-/* ---------------------------
-   Select2 초기화 & 중복 선택 방지
-   --------------------------- */
-function buildSelects(containerId, className, count){
-  const $cont = $('#' + containerId);
+function buildSelects(containerId,className,count){
+  const $cont=$('#'+containerId);
   $cont.empty();
-  for(let i=1;i<=count;i++){
-    $cont.append(`<select class="${className}" id="${containerId}-${i}"></select>`);
-  }
+  for(let i=1;i<=count;i++) $cont.append(`<select class="${className}" id="${containerId}-${i}"></select>`);
 }
-function refreshMatchSelectOptions(){
-  let users = userTable.rows().data().toArray();
-  let selected = $('.match-p').map(function(){ return $(this).val(); }).get().filter(v=>v).map(String);
-  let selectedSet = new Set(selected);
-  $('.match-p').each(function(){
-    let sel = $(this), curVal = sel.val();
+
+function refreshSelectOptions(selector){
+  let users=userTable.rows().data().toArray();
+  let selected=$(selector).map(function(){ return $(this).val(); }).get().filter(v=>v).map(String);
+  let selectedSet=new Set(selected);
+  $(selector).each(function(){
+    let sel=$(this), curVal=sel.val();
     if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
     sel.empty().append('<option value=""></option>');
-    users.forEach(u=>{ if(!selectedSet.has(String(u.userId)) || String(u.userId)===String(curVal)) sel.append($('<option>').val(u.userId).text(u.userName)); });
-    sel.val(curVal||'').select2({placeholder:'선수 선택',width:'100%',allowClear:true});
-  });
-}
-/* 새로 추가: 로그 섹션의 select 들에 대해서도 중복 선택 방지 */
-function refreshLogSelectOptions(){
-  let users = userTable.rows().data().toArray();
-  let selected = $('.log-p').map(function(){ return $(this).val(); }).get().filter(v=>v).map(String);
-  let selectedSet = new Set(selected);
-  $('.log-p').each(function(){
-    let sel = $(this), curVal = sel.val();
-    if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
-    sel.empty().append('<option value=""></option>');
-    users.forEach(u=>{ if(!selectedSet.has(String(u.userId)) || String(u.userId)===String(curVal)) sel.append($('<option>').val(u.userId).text(u.userName)); });
+    users.forEach(u=>{ if(!selectedSet.has(String(u.userId))||String(u.userId)===String(curVal)) sel.append($('<option>').val(u.userId).text(u.userName)); });
     sel.val(curVal||'').select2({placeholder:'선수 선택',width:'100%',allowClear:true});
   });
 }
 
 function initPlayers(){
-  // build selects if empty
   if($('#match-team').children().length===0) buildSelects('match-team','match-p',10);
   if($('#log-players').children().length===0) buildSelects('log-players','log-p',10);
-  let users = userTable.rows().data().toArray();
-  // init log-p (we'll enforce uniqueness using refreshLogSelectOptions)
-  $('.log-p').each(function(){ let sel=$(this); if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy'); sel.empty().append('<option value=""></option>'); users.forEach(u=>sel.append($('<option>').val(u.userId).text(u.userName))); sel.val('').select2({placeholder:'선수 선택',width:'100%',allowClear:true}); });
-  // init match-p then enforce uniqueness
-  $('.match-p').each(function(){ let sel=$(this); if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy'); sel.empty().append('<option value=""></option>'); users.forEach(u=>sel.append($('<option>').val(u.userId).text(u.userName))); sel.val('').select2({placeholder:'선수 선택',width:'100%',allowClear:true}); });
-  // enforce uniqueness for both sets
-  refreshMatchSelectOptions();
-  refreshLogSelectOptions();
-  // bind change to update other selects when one changes
-  $('.match-p').off('change.unique').on('change.unique', refreshMatchSelectOptions);
-  $('.log-p').off('change.unique').on('change.unique', refreshLogSelectOptions);
+  refreshSelectOptions('.match-p');
+  refreshSelectOptions('.log-p');
+  $('.match-p').off('change.unique').on('change.unique', ()=>refreshSelectOptions('.match-p'));
+  $('.log-p').off('change.unique').on('change.unique', ()=>refreshSelectOptions('.log-p'));
 }
 
 /* ---------------------------
@@ -416,180 +356,86 @@ $('#btn-match').off('click').on('click', function(){
   $('#match-result tbody').html(rows);
 });
 
-/* ---------------------------
-   내전 기록 저장 / 최근 기록 표시 (변경점 반영)
-   - 저장: 현재 날짜 사용
-   - 저장 데이터 구조: { date, winners: [...5], losers: [...5] }
-   - loadLogs는 기존 형식(구버전)도 호환
-   --------------------------- */
+function getWinnersLosers(players){
+  let winners=[], losers=[];
+  players.forEach((p,i)=> i%2===0 ? winners.push(p) : losers.push(p));
+  while(winners.length<5) winners.push('');
+  while(losers.length<5) losers.push('');
+  return {winners, losers};
+}
+
+function resolveName(val){
+  if(!val) return '(미선택)';
+  let u = userTable.rows().data().toArray().find(u=>String(u.userId)===String(val) || u.userName===val);
+  return u ? u.userName : val;
+}
+
+function getMenuForVal(val){
+  if(!val) return `<div style="color:#777;margin-bottom:6px">(미선택)</div>`;
+  let user = userTable.rows().data().toArray().find(u=>String(u.userId)===String(val)||u.userName===val);
+  return user ? `<div style="margin-bottom:6px"><button class="delete-btn log-delete" data-userid="${user.userId}">삭제</button></div>` 
+              : `<div style="color:#777;margin-bottom:6px">(대시보드 없음)</div>`;
+}
+
 $('#btn-log-save').off('click').on('click', function(){
-  if(!allowedUsers.includes(currentUser)){ alert('권한이 없습니다'); return; }
+  if(!allowedUsers.includes(currentUser)) return alert('권한이 없습니다');
+  
   const date = new Date().toISOString().slice(0,10);
-  // log-players 순서: buildSelects('log-players','log-p',10)로 생성되며 grid(2 cols)이고,
-  // 인덱스가 0,2,4,6,8 -> 좌측(승리팀), 1,3,5,7,9 -> 우측(패배팀)
-  const players = $('.log-p').map(function(){ return $(this).val() || ''; }).get();
-  let winners = [], losers = [];
-  for(let i=0;i<players.length;i++){
-    if(i % 2 === 0) winners.push(players[i]); // 0,2,4,6,8
-    else losers.push(players[i]);             // 1,3,5,7,9
-  }
-  // 보장: winners/losers 길이가 5이도록 (부족하면 빈값 채움)
-  while(winners.length < 5) winners.push('');
-  while(losers.length  < 5) losers.push('');
+  const players = $('.log-p').map((_,el)=>$(el).val()||'').get();
+  const {winners, losers} = getWinnersLosers(players);
 
-  if(players.filter(v=>v!=='').length !== 10){
-    if(!confirm('선수가 모두 선택되지 않았습니다. 계속 저장하시겠습니까?')) return;
-  }
+  if(players.filter(v=>v!=='').length!==10 && !confirm('선수가 모두 선택되지 않았습니다. 계속 저장하시겠습니까?')) return;
+
+  let users = userTable.rows().data().toArray();
+  winners.forEach(id=>{ let u=users.find(u=>String(u.userId)===String(id)); if(u){ u.rating=(+u.rating||0)+10; u.win=(+u.win||0)+1; }});
+  losers.forEach(id=>{ let u=users.find(u=>String(u.userId)===String(id)); if(u){ u.rating=(+u.rating||0)-10; u.loss=(+u.loss||0)+1; if(u.loss<0) u.loss=0; }});
+
+  userTable.rows().invalidate().draw(false);
+  saveUsersToLocalStorage();
+
   let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
-  let users = userTable.rows().data().toArray(); // 현재 대시보드 유저 데이터 가져오기
-
-// 승리팀 적용
-winners.forEach(id=>{
-    let user = users.find(u => String(u.userId) === String(id));
-    if(user){
-        user.rating = (parseInt(user.rating)||0) + 10; 
-        user.win = (parseInt(user.win)||0) + 1;
-    }
-});
-
-// 패배팀 적용
-losers.forEach(id=>{
-    let user = users.find(u => String(u.userId) === String(id));
-    if(user){
-        user.rating = (parseInt(user.rating)||0) - 10;
-        user.loss = (parseInt(user.loss)||0) + 1; // 패배 +1
-        if(user.loss < 0) user.loss = 0; // 최소값 0 유지
-    }
-});
-
-// 변경 사항을 테이블에 반영
-userTable.rows().invalidate().draw(false);
-saveUsersToLocalStorage();
-
-  logs.push({date, winners, losers});
+  logs.push({date,winners,losers});
   localStorage.setItem('matchLogs', JSON.stringify(logs));
   alert('기록이 저장되었습니다.');
   loadLogs();
 });
 
-/* 메뉴 복제용: 주어진 값(아이디 또는 이름)에서 대시보드의 메뉴 버튼 HTML 생성 */
-function getMenuForVal(val){
-  if(!val) return `<div style="color:#777;margin-bottom:6px">(미선택)</div>`;
-  let users = userTable.rows().data().toArray();
-  // 먼저 userId로 찾기
-  let found = users.find(u => String(u.userId) === String(val));
-  if(!found){
-    // 이름으로도 시도
-    found = users.find(u => String(u.userName) === String(val));
-  }
-  if(found){
-    // 대시보드 메뉴 기본 컨텐츠를 본따 생성 (삭제 버튼)
-    // 로그쪽 버튼은 클래스(log-delete)를 추가하여 동작 제어
-    return `<div style="margin-bottom:6px"><button class="delete-btn log-delete" data-userid="${found.userId}">삭제</button></div>`;
-  } else {
-    return `<div style="color:#777;margin-bottom:6px">(대시보드 없음)</div>`;
-  }
-}
-
 function loadLogs(){
   let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
-  if(!logs || logs.length===0){
-    $('#log-result tbody').html('<tr><td colspan="4" style="text-align:center">저장된 기록이 없습니다.</td></tr>');
-    return;
-  }
-  let rows = '';
-  // logs 배열을 역순으로 출력 (최신이 위)
-  for(let i = logs.length-1; i >= 0; i--){
-    const lg = logs[i];
-    let dateText = lg.date || '';
-    let winnersArr = [], losersArr = [];
-    if(Array.isArray(lg.winners) && Array.isArray(lg.losers)){
-      winnersArr = lg.winners;
-      losersArr  = lg.losers;
-    } else if(Array.isArray(lg.players)){
-      winnersArr = (lg.players || []).slice(0,5);
-      losersArr  = (lg.players || []).slice(5,10);
-    }
+  if(!logs.length) return $('#log-result tbody').html('<tr><td colspan="4" style="text-align:center">저장된 기록이 없습니다.</td></tr>');
 
-    // id 또는 이름 -> 사용자명으로 바꿔주는 내부 함수 (기존과 동일)
-    function resolveName(val){
-      if(!val) return '(미선택)';
-      let found = userTable.rows().data().toArray().find(u => String(u.userId) === String(val));
-      if(found) return found.userName;
-      found = userTable.rows().data().toArray().find(u => u.userName === val);
-      if(found) return found.userName;
-      return val;
-    }
-
-    const winnersNames = (winnersArr || []).map(resolveName);
-    const losersNames  = (losersArr  || []).map(resolveName);
-
-    const winnersHTML = winnersNames.map(n => `<span class="winner-pill">${n}</span>`).join(' ');
-    const losersHTML  = losersNames.map(n  => `<span class="loser-pill">${n}</span>`).join(' ');
-
-    // **레코드 단위 삭제 버튼(항상 보이는 버튼)**: 로그 배열에서의 인덱스(i)를 data-log-index로 둠
+  const rows = logs.map((lg,i)=>{
+    const {winners, losers} = Array.isArray(lg.winners) && Array.isArray(lg.losers) ? lg 
+                                : {winners: (lg.players||[]).slice(0,5), losers:(lg.players||[]).slice(5,10)};
+    const winnersHTML = winners.map(resolveName).map(n=>`<span class="winner-pill">${n}</span>`).join(' ');
+    const losersHTML  = losers.map(resolveName).map(n=>`<span class="loser-pill">${n}</span>`).join(' ');
     const recordDeleteBtn = `<div style="margin-bottom:6px"><button class="log-record-delete" data-log-index="${i}">기록 삭제</button></div>`;
-
-    // 기존에 구성하던 유저별 메뉴(대시보드 메뉴 복제)는 유지
-    const perUserMenus = (winnersArr || []).map(v => getMenuForVal(v)).join('') +
-                         '<div style="height:6px;border-top:1px solid #444;margin:6px 0"></div>' +
-                         (losersArr || []).map(v => getMenuForVal(v)).join('');
-
-    const perUserMenusClean = (winnersArr || []).map(v => getMenuForVal(v)).join('') +
-                              (losersArr || []).map(v => getMenuForVal(v)).join('');
-    const menusHTML = recordDeleteBtn + perUserMenusClean;
-
-    rows += `<tr>
-      <td style="vertical-align:top">${dateText}</td>
-      <td style="vertical-align:top">${winnersHTML}</td>
-      <td style="vertical-align:top">${losersHTML}</td>
-      <td style="vertical-align:top">${menusHTML}</td>
-    </tr>`;
-  }
+    const perUserMenus = winners.concat(losers).map(getMenuForVal).join('');
+    return `<tr><td style="vertical-align:top">${lg.date||''}</td><td>${winnersHTML}</td><td>${losersHTML}</td><td>${recordDeleteBtn+perUserMenus}</td></tr>`;
+  }).reverse().join('');
 
   $('#log-result tbody').html(rows);
 
-  // --- 레코드 삭제 버튼 이벤트 바인딩 ---
   $('#log-result').off('click', '.log-record-delete').on('click', '.log-record-delete', function(){
-    if(!allowedUsers.includes(currentUser)){
-      alert('권한이 없습니다');
-      return;
-    }
+    if(!allowedUsers.includes(currentUser)) return alert('권한이 없습니다');
     if(!confirm('이 기록을 삭제하시겠습니까?')) return;
-    const idx = Number($(this).data('log-index'));
+    const idx = +$(this).data('log-index');
     let logs = JSON.parse(localStorage.getItem('matchLogs')||'[]');
-    if(isNaN(idx) || idx < 0 || idx >= logs.length){
-      console.warn('invalid log index', idx);
-      loadLogs();
-      return;
-    }
-    logs.splice(idx, 1); // 해당 항목 삭제
-    localStorage.setItem('matchLogs', JSON.stringify(logs));
-    loadLogs(); // 다시 렌더
+    if(idx>=0 && idx<logs.length){ logs.splice(idx,1); localStorage.setItem('matchLogs', JSON.stringify(logs)); loadLogs(); }
   });
 
-  // --- (기존) 로그 내 유저 삭제 버튼(대시보드 유저 삭제 연동)도 그대로 유지 ---
   $('#log-result').off('click', '.log-delete').on('click', '.log-delete', function(){
     const uid = $(this).data('userid');
-    if(!allowedUsers.includes(currentUser)){
-      alert('권한이 없습니다');
-      return;
+    if(!allowedUsers.includes(currentUser)) return alert('권한이 없습니다');
+    if(!editable) return alert('편집 모드에서만 삭제 가능합니다.');
+    if(confirm('대시보드에서 해당 유저를 삭제하시겠습니까?')){
+      userTable.rows((idx,data)=>String(data.userId)===String(uid)).remove().draw(false);
+      saveUsersToLocalStorage();
+      loadLogs();
     }
-    if(!editable){
-      alert('유저 삭제는 편집 모드에서만 가능합니다. 먼저 "유저 수정"을 눌러 편집 모드로 전환하세요.');
-      return;
-    }
-    if(!confirm('대시보드에서 해당 유저를 삭제하시겠습니까?')) return;
-    userTable.rows(function(idx, data, node){
-      return String(data.userId) === String(uid);
-    }).remove().draw(false);
-    saveUsersToLocalStorage();
-    loadLogs();
   });
 }
 
-
-/* 초기 로드 */
 $(document).ready(function(){
   loadUsersFromLocalStorage();
   updateUserEditButtonVisibility();
