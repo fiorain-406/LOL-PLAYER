@@ -13,22 +13,22 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDocs, setDoc, collection, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
-  authDomain: "lol-player-8f92b.firebaseapp.com",
-  projectId: "lol-player-8f92b",
-  storageBucket: "lol-player-8f92b.firebasestorage.app",
-  messagingSenderId: "497657121304",
-  appId: "1:497657121304:web:3c3c8678290d9fff99116d",
-  databaseURL: "https://lol-player-8f92b-default-rtdb.firebaseio.com"
+  apiKey: "xxx",
+  authDomain: "xxx.firebaseapp.com",
+  projectId: "xxx",
+  storageBucket: "xxx.appspot.com",
+  messagingSenderId: "xxx",
+  appId: "xxx"
 };
-
 const app = initializeApp(firebaseConfig);
-const firestore = getFirestore(app);
-window.firestoreDB = firestore;
+const db = getFirestore(app);
+
+window.firestoreDB = db;
+
 </script>
 
 <style>
@@ -222,45 +222,47 @@ function applyTierColors(){
   });
 }
 
-async function loadUsersFromLocalStorage(){
+async function loadUsersFromLocalStorage() {
   try {
-    const q = query(collection(window.firestoreDB, 'users'));
-    const snap = await getDocs(q);
-    const users = snap.docs.map(d => d.data());
-    users.forEach(u=>{ u.userId = u.userId || ++idCounter; idCounter = Math.max(idCounter, Number(u.userId)); });
-    userTable.clear();
-    users.forEach(u=>{
-      u.matchNumber = (u.win||0) + (u.loss||0);
-      u.winRate = calculateWinRate(u.win||0, u.matchNumber);
-      u.tier = getTierByRating(u.rating||0);
-      userTable.row.add(u);
+    const snapshot = await getDocs(collection(window.firestoreDB, 'users'));
+    const users = [];
+    snapshot.forEach(docSnap => {
+      users.push(docSnap.data());
     });
-    userTable.draw();
-    initPlayers();
-    updateDeleteButtons();
-    applyTierColors();
+
+    if(users.length > 0){
+      userTable.clear().rows.add(users).draw();
+      console.log("✅ Firestore 불러오기 성공");
+    } else {
+      console.log("⚠️ Firestore에 유저 없음");
+    }
   } catch(e) {
-    console.error('load users error', e);
+    console.error("❌ load users error", e);
   }
 }
 
-async function saveUsersToLocalStorage(){
+async function saveUsersToLocalStorage() {
   try {
     const users = userTable.rows().data().toArray();
     const batch = writeBatch(window.firestoreDB);
-    users.forEach(u=>{
+
+    users.forEach(u => {
       u.matchNumber = (u.win||0) + (u.loss||0);
       u.winRate = calculateWinRate(u.win||0, u.matchNumber);
       u.tier = getTierByRating(u.rating||0);
-      u.userId = u.userId || ++idCounter;
+      u.userId = u.userId || (++idCounter);
+
       const ref = doc(window.firestoreDB, 'users', String(u.userId));
-      batch.set(ref, u);
+      batch.set(ref, u);  // Firestore에 저장
     });
+
     await batch.commit();
-  } catch(e) {
-    console.error('save users error', e);
+    console.log("✅ Firestore 저장 성공");
+  } catch (e) {
+    console.error("❌ save users error", e);
   }
 }
+
 
 $('#btn-add-user-bottom').off('click').on('click', function(){
   let newId = ++idCounter;
