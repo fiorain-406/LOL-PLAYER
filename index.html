@@ -14,10 +14,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-  getFirestore, doc, getDocs, setDoc, collection, writeBatch,
-  addDoc, deleteDoc, query, orderBy
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
@@ -31,12 +28,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 window.firestoreDB = db;
-</script>
 
-<script type="module">
 async function createTestUser() {
   try {
-    await addDoc(collection(window.firestoreDB, "users"), {
+    await addDoc(collection(db, "users"), {
       userId: 1,
       userName: "테스트유저",
       rating: 1000,
@@ -54,6 +49,7 @@ async function createTestUser() {
     console.error(e);
   }
 }
+
 createTestUser();
 </script>
 
