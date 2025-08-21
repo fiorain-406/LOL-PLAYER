@@ -14,14 +14,16 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, doc, writeBatch, getDocs, query, orderBy, deleteDoc } 
-    from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  import { 
+    getFirestore, collection, addDoc, doc, writeBatch, 
+    getDocs, query, orderBy, deleteDoc 
+  } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
     authDomain: "lol-player-8f92b.firebaseapp.com",
     projectId: "lol-player-8f92b",
-    storageBucket: "lol-player-8f92b.firebasestorage.app",
+    storageBucket: "lol-player-8f92b.appspot.com",
     messagingSenderId: "497657121304",
     appId: "1:497657121304:web:3c3c8678290d9fff99116d"
   };
@@ -30,7 +32,7 @@
   const db = getFirestore(app);
   window.firestoreDB = db;
 
-  // 테스트용 기본 유저 생성
+  // 테스트 유저 생성
   async function createTestUser() {
     try {
       const usersSnapshot = await getDocs(collection(db, "users"));
@@ -57,7 +59,7 @@
 
   createTestUser();
 
-  // 유저 저장 함수 (writeBatch 사용)
+  // 유저 저장 함수
   window.saveUsersToLocalStorage = async function(userTable, idCounter) {
     try {
       const users = userTable.rows().data().toArray();
