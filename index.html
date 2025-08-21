@@ -535,10 +535,20 @@ async function loadLogs(){
   }
 }
 
-$(document).ready(function(){
+$(document).ready(async function(){
   updateUserEditButtonVisibility();
   $('#btn-log-save').hide();
+
+  try {
+    const usersSnapshot = await getDocs(collection(window.firestoreDB, "users"));
+    const users = usersSnapshot.docs.map(doc => doc.data());
+    userTable.clear();
+    userTable.rows.add(users).draw();
+  } catch (e) {
+    console.error("❌ load users error", e);
+  }
 });
+
 </script>
 
 </body>
