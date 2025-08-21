@@ -14,14 +14,14 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, doc, writeBatch, getDocs, query, orderBy, deleteDoc } 
+import { getFirestore, collection, addDoc, doc, writeBatch, getDocs } 
   from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
   authDomain: "lol-player-8f92b.firebaseapp.com",
   projectId: "lol-player-8f92b",
-  storageBucket: "lol-player-8f92b.firebasestorage.app",
+  storageBucket: "lol-player-8f92b.appspot.com",
   messagingSenderId: "497657121304",
   appId: "1:497657121304:web:3c3c8678290d9fff99116d"
 };
@@ -57,24 +57,24 @@ async function createTestUser() {
 
 createTestUser();
 
-// 안전 체크 포함 Firestore 저장 함수
-window.saveUsersToLocalStorage = async function(userTable, idCounter) {
-  if (!userTable || typeof userTable.rows !== 'function') {
+// 전역 userTable과 idCounter 참조하도록 수정
+window.saveUsersToLocalStorage = async function() {
+  if (!window.userTable || typeof window.userTable.rows !== 'function') {
     console.error("❌ saveUsersToLocalStorage: userTable이 DataTable 객체가 아닙니다.");
     return;
   }
 
   try {
-    const users = userTable.rows().data().toArray();
-    const batch = writeBatch(db);
+    const users = window.userTable.rows().data().toArray();
+    const batch = writeBatch(window.firestoreDB);
 
     users.forEach(u => {
       u.matchNumber = (u.win || 0) + (u.loss || 0);
       u.winRate = (u.matchNumber === 0 ? '0%' : Math.round((u.win || 0) / u.matchNumber * 100) + '%');
       u.tier = u.tier || '브론즈';
-      u.userId = u.userId || (++idCounter);
+      u.userId = u.userId || (++window.idCounter);
 
-      const ref = doc(db, 'users', String(u.userId));
+      const ref = doc(window.firestoreDB, 'users', String(u.userId));
       batch.set(ref, u);
     });
 
@@ -85,6 +85,7 @@ window.saveUsersToLocalStorage = async function(userTable, idCounter) {
   }
 };
 </script>
+
 
 <style>
 :root{--card:#2a2a2a;--accent1:#ffb347;--accent2:#ff8c42;--text:#f0f0f0;--muted:#555}
