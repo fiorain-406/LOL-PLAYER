@@ -14,7 +14,10 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDocs, setDoc, collection, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getFirestore, doc, getDocs, setDoc, collection, writeBatch,
+  addDoc, deleteDoc, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "xxx",
@@ -165,7 +168,10 @@ function updateUserEditButtonVisibility(){
 $('nav button').click(function(){
   $('.section').hide();
   if(this.id==='menu-dashboard') $('#section-dashboard').show();
-  if(this.id==='menu-match') $('#section-match').show();
+  if(this.id==='menu-match'){ 
+    $('#section-match').show();
+    initPlayers();
+  }
   if(this.id==='menu-log'){ 
     $('#section-log').show(); 
     initPlayers(); 
@@ -185,24 +191,24 @@ var userTable = $('#userTable').DataTable({
   columnDefs:[{targets:1,width:'17%',className:'dt-left'},{targets:4,width:'7%'},{targets:5,width:'7%'},{targets:10,width:'8%'}]
 });
 
+userTable.on('draw', function(){
+  applyTierColors();
+  updateDeleteButtons();
+});
+
 function calculateWinRate(win, match){ return match===0 ? '0%' : Math.round((win/match)*100)+'%'; }
 
 function getTierByRating(r){
-  if(!r) return '아이언';
-  const rating = Number(r);
-  if(rating>=3000) return '챌린저'; if(rating>=2900) return '그마';
-  if(rating>=2800) return '마스터 3'; if(rating>=2700) return '마스터 2'; if(rating>=2600) return '마스터 1';
-  if(rating>=2500) return '마스터 0'; if(rating>=2450) return '다이아 1'; if(rating>=2400) return '다이아 2';
-  if(rating>=2350) return '다이아 3'; if(rating>=2300) return '다이아 4'; if(rating>=2250) return '다이아 5';
-  if(rating>=2200) return '에메랄드 1'; if(rating>=2150) return '에메랄드 2'; if(rating>=2100) return '에메랄드 3';
-  if(rating>=2050) return '에메랄드 4'; if(rating>=2000) return '에메랄드 5'; if(rating>=1950) return '플레티넘 1';
-  if(rating>=1900) return '플레티넘 2'; if(rating>=1850) return '플레티넘 3'; if(rating>=1800) return '플레티넘 4';
-  if(rating>=1750) return '플레티넘 5'; if(rating>=1700) return '골드 1'; if(rating>=1650) return '골드 2';
-  if(rating>=1600) return '골드 3'; if(rating>=1550) return '골드 4'; if(rating>=1500) return '골드 5';
-  if(rating>=1450) return '실버 1'; if(rating>=1400) return '실버 2'; if(rating>=1350) return '실버 3';
-  if(rating>=1300) return '실버 4'; if(rating>=1250) return '실버 5'; if(rating>=1200) return '브론즈 1';
-  if(rating>=1150) return '브론즈 2'; if(rating>=1100) return '브론즈 3'; if(rating>=1050) return '브론즈 4';
-  if(rating>=1000) return '브론즈 5'; return '아이언';
+  if(!r) return'아이언';
+  r=+r;
+  if(r>=3000) return'챌린저'; if(r>=2900) return'그마'; if(r>=2800) return'마스터 3'; if(r>=2700) return'마스터 2'; if(r>=2600) return'마스터 1'; if(r>=2500) return'마스터 0';
+  if(r>=2450) return'다이아 1'; if(r>=2400) return'다이아 2'; if(r>=2350) return'다이아 3'; if(r>=2300) return'다이아 4'; if(r>=2250) return'다이아 5';
+  if(r>=2200) return'에메랄드 1'; if(r>=2150) return'에메랄드 2'; if(r>=2100) return'에메랄드 3'; if(r>=2050) return'에메랄드 4'; if(r>=2000) return'에메랄드 5';
+  if(r>=1950) return'플레티넘 1'; if(r>=1900) return'플레티넘 2'; if(r>=1850) return'플레티넘 3'; if(r>=1800) return'플레티넘 4'; if(r>=1750) return'플레티넘 5';
+  if(r>=1700) return'골드 1'; if(r>=1650) return'골드 2'; if(r>=1600) return'골드 3'; if(r>=1550) return'골드 4'; if(r>=1500) return'골드 5';
+  if(r>=1450) return'실버 1'; if(r>=1400) return'실버 2'; if(r>=1350) return'실버 3'; if(r>=1300) return'실버 4'; if(r>=1250) return'실버 5';
+  if(r>=1200) return'브론즈 1'; if(r>=1150) return'브론즈 2'; if(r>=1100) return'브론즈 3'; if(r>=1050) return'브론즈 4'; if(r>=1000) return'브론즈 5';
+  return'아이언';
 }
 
 function applyTierColors(){
@@ -222,22 +228,21 @@ function applyTierColors(){
   });
 }
 
-async function loadUsersFromLocalStorage() {
-  try {
-    const snapshot = await getDocs(collection(window.firestoreDB, 'users'));
-    const users = [];
-    snapshot.forEach(docSnap => {
-      users.push(docSnap.data());
-    });
-
-    if(users.length > 0){
-      userTable.clear().rows.add(users).draw();
-      console.log("✅ Firestore 불러오기 성공");
-    } else {
-      console.log("⚠️ Firestore에 유저 없음");
-    }
-  } catch(e) {
-    console.error("❌ load users error", e);
+async function loadUsersLS(){
+  let u=JSON.parse(localStorage.getItem("users"))||[];
+  u.forEach(x=>{
+    if(!x.id){
+      idCounter=Math.max(idCounter,Date.now());
+      x.id=++idCounter;
+    }else idCounter=Math.max(idCounter,parseInt(x.id)||0);
+  });
+  if(u.length){
+    userTable.clear().rows.add(u).draw();
+    idCounter=Math.max(...u.map(x=>+x.id||0),idCounter);
+    console.log("✅ 불러옴");
+    updateTierColors();
+    renderUserTable();
+    renderMatchSelects();
   }
 }
 
@@ -263,12 +268,13 @@ async function saveUsersToLocalStorage() {
   }
 }
 
-
 $('#btn-add-user-bottom').off('click').on('click', function(){
   let newId = ++idCounter;
   let newUser = { userId:newId, userName:'이름', rating:1000, mainLane:'-', subLane:'-', win:0, loss:0, lastPlayDateSince:'-' };
   newUser.matchNumber = 0; newUser.winRate = calculateWinRate(0,0); newUser.tier = getTierByRating(newUser.rating);
   userTable.row.add(newUser).draw(false);
+  applyTierColors();
+  updateDeleteButtons();
   saveUsersToLocalStorage();
 });
 
@@ -466,5 +472,3 @@ $(document).ready(async function(){
 
 </body>
 </html>
-
-
