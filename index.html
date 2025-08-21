@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>내전 관리 사이트</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOL 내전 관리 사이트</title>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -14,23 +14,29 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, doc, writeBatch, getDocs } 
-  from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { 
+  getFirestore, collection, addDoc, doc, writeBatch, getDocs, query, orderBy, deleteDoc 
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
+// Firebase 설정
 const firebaseConfig = {
-  apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
-  authDomain: "lol-player-8f92b.firebaseapp.com",
-  projectId: "lol-player-8f92b",
-  storageBucket: "lol-player-8f92b.appspot.com",
-  messagingSenderId: "497657121304",
-  appId: "1:497657121304:web:3c3c8678290d9fff99116d"
+  apiKey: "AIzaSyBrdOkfNc4YBDc3m2ACqQhvIXQnzPOJzcw",
+  authDomain: "lol123-cad3e.firebaseapp.com",
+  projectId: "lol123-cad3e",
+  storageBucket: "lol123-cad3e.firebasestorage.app",
+  messagingSenderId: "22166999425",
+  appId: "1:22166999425:web:7f31c380eacc0406d4d880"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 window.firestoreDB = db;
 
-// 테스트용 기본 유저 생성
+// 글로벌 DataTable 변수
+window.userTable = null;
+let idCounter = 0;
+
+// 테스트 유저 생성
 async function createTestUser() {
   try {
     const usersSnapshot = await getDocs(collection(db, "users"));
@@ -51,41 +57,71 @@ async function createTestUser() {
       console.log("✅ users 컬렉션과 문서 생성 완료");
     }
   } catch(e) {
-    console.error(e);
+    console.error("❌ createTestUser error", e);
   }
 }
 
-createTestUser();
-
-// 전역 userTable과 idCounter 참조하도록 수정
-window.saveUsersToLocalStorage = async function() {
-  if (!window.userTable || typeof window.userTable.rows !== 'function') {
-    console.error("❌ saveUsersToLocalStorage: userTable이 DataTable 객체가 아닙니다.");
-    return;
-  }
-
+// Firestore 저장 함수
+async function saveUsersToFirestore() {
+  if (!window.userTable) return console.error("userTable이 초기화되지 않았습니다.");
   try {
     const users = window.userTable.rows().data().toArray();
-    const batch = writeBatch(window.firestoreDB);
-
+    const batch = writeBatch(db);
     users.forEach(u => {
-      u.matchNumber = (u.win || 0) + (u.loss || 0);
-      u.winRate = (u.matchNumber === 0 ? '0%' : Math.round((u.win || 0) / u.matchNumber * 100) + '%');
+      u.matchNumber = (u.win||0) + (u.loss||0);
+      u.winRate = u.matchNumber===0 ? '0%' : Math.round((u.win||0)/u.matchNumber*100)+'%';
       u.tier = u.tier || '브론즈';
-      u.userId = u.userId || (++window.idCounter);
-
-      const ref = doc(window.firestoreDB, 'users', String(u.userId));
+      u.userId = u.userId || (++idCounter);
+      const ref = doc(db, 'users', String(u.userId));
       batch.set(ref, u);
     });
-
     await batch.commit();
     console.log("✅ Firestore 저장 성공");
-  } catch (e) {
-    console.error("❌ save users error", e);
+  } catch(e) {
+    console.error("❌ saveUsersToFirestore error", e);
   }
-};
-</script>
+}
 
+// 문서 준비 후 DataTable 초기화
+$(document).ready(async function() {
+  await createTestUser();
+
+  // DataTable 초기화
+  window.userTable = $('#userTable').DataTable({
+    paging: false,
+    serverSide: false,
+    data: [],
+    columns: [
+      { data: null, render: (d,t,r,m)=> m.row+1 },
+      { data: "userName" },
+      { data: "tier" },
+      { data: "rating" },
+      { data: "mainLane" },
+      { data: "subLane" },
+      { data: "matchNumber" },
+      { data: "win" },
+      { data: "loss" },
+      { data: "winRate" },
+      { data: "lastPlayDateSince" },
+      { data: null, defaultContent: '<button class="delete-btn">삭제</button>', orderable:false }
+    ]
+  });
+
+  // 버튼 이벤트
+  $('#add-user-btn').click(function(){
+    const newId = ++idCounter;
+    const newUser = { userId:newId, userName:'이름', rating:1000, mainLane:'-', subLane:'-', win:0, loss:0, matchNumber:0, winRate:'0%', tier:'브론즈', lastPlayDateSince:'-' };
+    window.userTable.row.add(newUser).draw(false);
+    saveUsersToFirestore();
+  });
+
+  $('#userTable tbody').on('click','.delete-btn', async function(){
+    if(!confirm('정말 삭제하시겠습니까?')) return;
+    window.userTable.row($(this).closest('tr')).remove().draw(false);
+    await saveUsersToFirestore();
+  });
+});
+</script>
 
 <style>
 :root{--card:#2a2a2a;--accent1:#ffb347;--accent2:#ff8c42;--text:#f0f0f0;--muted:#555}
