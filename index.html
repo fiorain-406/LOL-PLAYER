@@ -18,7 +18,6 @@ import {
   getFirestore, collection, addDoc, doc, writeBatch, getDocs, query, orderBy, deleteDoc 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-// Firebase 설정
 const firebaseConfig = {
   apiKey: "AIzaSyBrdOkfNc4YBDc3m2ACqQhvIXQnzPOJzcw",
   authDomain: "lol123-cad3e.firebaseapp.com",
@@ -32,36 +31,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 window.firestoreDB = db;
 
-// 글로벌 DataTable 변수
 window.userTable = null;
 let idCounter = 0;
 
-// 테스트 유저 생성
-async function createTestUser() {
-  try {
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    if (usersSnapshot.empty) {
-      await addDoc(collection(db, "users"), {
-        userId: 1,
-        userName: "테스트유저",
-        rating: 1000,
-        tier: "브론즈 5",
-        mainLane: "-",
-        subLane: "-",
-        win: 0,
-        loss: 0,
-        matchNumber: 0,
-        winRate: "0%",
-        lastPlayDateSince: "-"
-      });
-      console.log("✅ users 컬렉션과 문서 생성 완료");
-    }
-  } catch(e) {
-    console.error("❌ createTestUser error", e);
-  }
-}
-
-// Firestore 저장 함수
 async function saveUsersToFirestore() {
   if (!window.userTable) return console.error("userTable이 초기화되지 않았습니다.");
   try {
@@ -82,32 +54,31 @@ async function saveUsersToFirestore() {
   }
 }
 
-// 문서 준비 후 DataTable 초기화
 $(document).ready(async function() {
   await createTestUser();
 
-  // DataTable 초기화
-  window.userTable = $('#userTable').DataTable({
-    paging: false,
-    serverSide: false,
-    data: [],
-    columns: [
-      { data: null, render: (d,t,r,m)=> m.row+1 },
-      { data: "userName" },
-      { data: "tier" },
-      { data: "rating" },
-      { data: "mainLane" },
-      { data: "subLane" },
-      { data: "matchNumber" },
-      { data: "win" },
-      { data: "loss" },
-      { data: "winRate" },
-      { data: "lastPlayDateSince" },
-      { data: null, defaultContent: '<button class="delete-btn">삭제</button>', orderable:false }
-    ]
-  });
+  if (!window.userTable) {
+    window.userTable = $('#userTable').DataTable({
+      paging: false,
+      serverSide: false,
+      data: [],
+      columns: [
+        { data: null, render: (d,t,r,m)=> m.row+1 },
+        { data: "userName" },
+        { data: "tier" },
+        { data: "rating" },
+        { data: "mainLane" },
+        { data: "subLane" },
+        { data: "matchNumber" },
+        { data: "win" },
+        { data: "loss" },
+        { data: "winRate" },
+        { data: "lastPlayDateSince" },
+        { data: null, defaultContent: '<button class="delete-btn">삭제</button>', orderable:false }
+      ]
+    });
+  }
 
-  // 버튼 이벤트
   $('#add-user-btn').click(function(){
     const newId = ++idCounter;
     const newUser = { userId:newId, userName:'이름', rating:1000, mainLane:'-', subLane:'-', win:0, loss:0, matchNumber:0, winRate:'0%', tier:'브론즈', lastPlayDateSince:'-' };
@@ -224,7 +195,7 @@ input[type=text], input[type=number], input[type=date]{padding:6px 8px;border-ra
 <button id="btn-add-user-bottom" class="fixed-btn" style="display:none">유저 추가</button>
 <button id="btn-log-save" class="fixed-btn">기록 저장</button>
 
-<script>
+<script type="module">
 let editable = false;
 let idCounter = 0;
 const allowedUsers = ['admin'];
@@ -542,3 +513,4 @@ $(document).ready(async function(){
 
 </body>
 </html>
+
