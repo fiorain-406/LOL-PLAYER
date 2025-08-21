@@ -248,24 +248,6 @@ function applyTierColors(){
   });
 }
 
-async function loadUsersLS(){
-  let u=JSON.parse(localStorage.getItem("users"))||[];
-  u.forEach(x=>{
-    if(!x.id){
-      idCounter=Math.max(idCounter,Date.now());
-      x.id=++idCounter;
-    }else idCounter=Math.max(idCounter,parseInt(x.id)||0);
-  });
-  if(u.length){
-    userTable.clear().rows.add(u).draw();
-    idCounter=Math.max(...u.map(x=>+x.id||0),idCounter);
-    console.log("✅ 불러옴");
-    updateTierColors();
-    renderUserTable();
-    renderMatchSelects();
-  }
-}
-
 async function saveUsersToLocalStorage() {
   try {
     const users = userTable.rows().data().toArray();
@@ -491,3 +473,7 @@ $(document).ready(function(){
 
 </body>
 </html>
+
+</body>
+</html>
+
