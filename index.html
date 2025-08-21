@@ -20,18 +20,17 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "xxx",
-  authDomain: "xxx.firebaseapp.com",
-  projectId: "xxx",
-  storageBucket: "xxx.appspot.com",
-  messagingSenderId: "xxx",
-  appId: "xxx"
+  apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
+  authDomain: "lol-player-8f92b.firebaseapp.com",
+  projectId: "lol-player-8f92b",
+  storageBucket: "lol-player-8f92b.appspot.com",
+  messagingSenderId: "497657121304",
+  appId: "1:497657121304:web:3c3c8678290d9fff99116d"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
 window.firestoreDB = db;
-
 </script>
 
 <style>
@@ -201,6 +200,7 @@ function calculateWinRate(win, match){ return match===0 ? '0%' : Math.round((win
 function getTierByRating(r){
   if(!r) return'아이언';
   r=+r;
+  // 등급 판정
   if(r>=3000) return'챌린저'; if(r>=2900) return'그마'; if(r>=2800) return'마스터 3'; if(r>=2700) return'마스터 2'; if(r>=2600) return'마스터 1'; if(r>=2500) return'마스터 0';
   if(r>=2450) return'다이아 1'; if(r>=2400) return'다이아 2'; if(r>=2350) return'다이아 3'; if(r>=2300) return'다이아 4'; if(r>=2250) return'다이아 5';
   if(r>=2200) return'에메랄드 1'; if(r>=2150) return'에메랄드 2'; if(r>=2100) return'에메랄드 3'; if(r>=2050) return'에메랄드 4'; if(r>=2000) return'에메랄드 5';
