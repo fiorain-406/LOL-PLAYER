@@ -483,8 +483,7 @@ async function loadLogs(){
   }
 }
 
-$(document).ready(async function(){
-  await loadUsersFromLocalStorage();
+$(document).ready(function(){
   updateUserEditButtonVisibility();
   $('#btn-log-save').hide();
 });
