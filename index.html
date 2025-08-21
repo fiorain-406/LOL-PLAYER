@@ -13,24 +13,15 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  doc, 
-  writeBatch, 
-  getDocs, 
-  query, 
-  orderBy, 
-  deleteDoc 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, doc, writeBatch } 
+  from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
   authDomain: "lol-player-8f92b.firebaseapp.com",
   projectId: "lol-player-8f92b",
-  storageBucket: "lol-player-8f92b.appspot.com", // ⚡ 수정
+  storageBucket: "lol-player-8f92b.appspot.com",
   messagingSenderId: "497657121304",
   appId: "1:497657121304:web:3c3c8678290d9fff99116d"
 };
@@ -41,42 +32,22 @@ window.firestoreDB = db;
 
 async function createTestUser() {
   try {
-    const usersCollection = collection(db, "users");
-    const snap = await getDocs(usersCollection);
-    if (snap.empty) {
-      await addDoc(usersCollection, {
-        userId: 1,
-        userName: "테스트유저",
-        rating: 1000,
-        tier: "브론즈 5",
-        mainLane: "-",
-        subLane: "-",
-        win: 0,
-        loss: 0,
-        matchNumber: 0,
-        winRate: "0%",
-        lastPlayDateSince: "-"
-      });
-      console.log("✅ users 컬렉션과 문서 생성 완료");
-    } else {
-      console.log("ℹ️ users 컬렉션에 이미 데이터가 있습니다.");
-    }
-  } catch (e) {
-    console.error("❌ createTestUser error", e);
-  }
-}
-
-async function saveUsersToFirestore(users) {
-  try {
-    const batch = writeBatch(db);
-    users.forEach(u => {
-      const ref = doc(db, "users", String(u.userId));
-      batch.set(ref, u);
+    await addDoc(collection(db, "users"), {
+      userId: 1,
+      userName: "테스트유저",
+      rating: 1000,
+      tier: "브론즈 5",
+      mainLane: "-",
+      subLane: "-",
+      win: 0,
+      loss: 0,
+      matchNumber: 0,
+      winRate: "0%",
+      lastPlayDateSince: "-"
     });
-    await batch.commit();
-    console.log("✅ Firestore 저장 성공");
-  } catch (e) {
-    console.error("❌ saveUsersToFirestore error", e);
+    console.log("✅ users 컬렉션과 문서 생성 완료");
+  } catch(e) {
+    console.error(e);
   }
 }
 
@@ -503,3 +474,4 @@ $(document).ready(function(){
 
 </body>
 </html>
+
