@@ -33,6 +33,30 @@ const db = getFirestore(app);
 window.firestoreDB = db;
 </script>
 
+<script type="module">
+async function createTestUser() {
+  try {
+    await addDoc(collection(window.firestoreDB, "users"), {
+      userId: 1,
+      userName: "테스트유저",
+      rating: 1000,
+      tier: "브론즈 5",
+      mainLane: "-",
+      subLane: "-",
+      win: 0,
+      loss: 0,
+      matchNumber: 0,
+      winRate: "0%",
+      lastPlayDateSince: "-"
+    });
+    console.log("✅ users 컬렉션과 문서 생성 완료");
+  } catch(e) {
+    console.error(e);
+  }
+}
+createTestUser();
+</script>
+
 <style>
 :root{--card:#2a2a2a;--accent1:#ffb347;--accent2:#ff8c42;--text:#f0f0f0;--muted:#555}
 body{font-family:Segoe UI, Tahoma, Geneva, Verdana,sans-serif;background:#222;margin:0;padding:20px;color:var(--text)}
