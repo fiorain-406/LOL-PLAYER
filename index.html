@@ -11,6 +11,8 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore-compat.js"></script>
 
   <style>
     :root{--card:#2a2a2a;--accent1:#ffb347;--accent2:#ff8c42;--text:#f0f0f0;--muted:#555}
@@ -124,16 +126,10 @@
     </div>
   </section>
 
-  <!-- Firebase + App Script -->
-  <script type="module">
-    // ===== Firebase SDKs =====
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { 
-      getFirestore, collection, doc, setDoc, addDoc, deleteDoc,
-      onSnapshot, query, orderBy, serverTimestamp, getDocs
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  <script>
+  $(document).ready(function(){
 
-    // === Your Firebase Config (from user) ===
+    // Firebase 초기화
     const firebaseConfig = {
       apiKey: "AIzaSyBVAVqBNePwpYzBYpIt68S93toyQPGbOuk",
       authDomain: "datebase-6d247.firebaseapp.com",
@@ -142,14 +138,10 @@
       messagingSenderId: "720823690695",
       appId: "1:720823690695:web:f80544a7604eb9ac2da5e2"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // ===== Helpers =====
-    const $ = (sel, root=document) => root.querySelector(sel);
-    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-
+    // 유틸
     function calculateWinRate(win, match){ return match===0? '0%': Math.round((win/match)*100)+"%"; }
     function getTierByRating(r){
       const rating = Number(r)||0;
@@ -198,270 +190,130 @@
         '골드':['#FAED7D','#121212'], '플레티넘':['#ABF200','#121212'], '에메랄드':['#2FED28','#121212'],
         '다이아':['#00D8FF','#121212'], '마스터':['#C98AFF','#121212'], '그마':['#FF3636','#121212'], '챌린저':['linear-gradient(to right,#ffd700,#1e90ff)','#121212']
       };
-      $('#userTable tbody').querySelectorAll('tr').forEach(tr=>{
-        const td = tr.children[2];
-        if(!td) return;
-        const tier = td.textContent.trim();
+      $('#userTable tbody tr').each(function(){
+        const td = $(this).find('td').eq(2); // 티어 칸
+        const tier = td.text().trim();
         let bg='#2a2a2a', color='#f0f0f0';
         for(const k in colors){ if(tier.includes(k)){ bg=colors[k][0]; color=colors[k][1]; break; } }
-        if(tier.includes('챌린저')){ td.style.background = bg; } else { td.style.backgroundColor = bg; }
-        td.style.color = color;
-        td.style.fontWeight = '700';
+        if(tier.includes('챌린저')) td.css('background',bg);
+        else td.css('background-color',bg);
+        td.css('color',color).css('font-weight','700');
       });
     }
 
-    // ====== DataTables (Users) ======
-    const dt = $("#userTable");
-    const userTable = $("#userTable");
-    let dtInstance;
-    function initDataTable(){
-      if($.fn.DataTable.isDataTable('#userTable')){
-        dtInstance.destroy();
-        $('#userTable tbody').innerHTML = '';
-      }
-      dtInstance = window.$('#userTable').DataTable({
-        paging:false, data:[], autoWidth:false,
-        columns:[
-          {data:null, render:(d,t,r,m)=>m.row+1},
-          {data:"userName"}, {data:"tier"}, {data:"rating"}, {data:"mainLane"}, {data:"subLane"},
-          {data:"matchNumber"}, {data:"win"}, {data:"loss"}, {data:"winRate"}, {data:"lastPlayDateSince"},
-          {data:null, defaultContent:'<button class="btn btn-del">삭제</button>', orderable:false}
-        ],
-        columnDefs:[{targets:1,width:'17%',className:'dt-left'},{targets:[4,5],width:'7%'},{targets:10,width:'8%'}]
-      });
-    }
-    initDataTable();
+    // DataTable 초기화
+    let dtInstance = $('#userTable').DataTable({
+      paging:false, data:[], autoWidth:false,
+      columns:[
+        {data:null, render:(d,t,r,m)=>m.row+1},
+        {data:"userName"}, {data:"tier"}, {data:"rating"}, {data:"mainLane"}, {data:"subLane"},
+        {data:"matchNumber"}, {data:"win"}, {data:"loss"}, {data:"winRate"}, {data:"lastPlayDateSince"},
+        {data:null, defaultContent:'<button class="btn btn-del">삭제</button>', orderable:false}
+      ],
+      columnDefs:[{targets:1,width:'17%',className:'dt-left'},{targets:[4,5],width:'7%'},{targets:10,width:'8%'}]
+    });
 
-    // ===== Global State =====
-    let editable = false;
+    let editable=false;
 
-    // ===== Firestore Realtime: Users =====
-    const usersCol = collection(db, 'users');
-    onSnapshot(query(usersCol, orderBy('userName')), (snap)=>{
+    const usersCol = db.collection('users');
+    usersCol.orderBy('userName').onSnapshot((snap)=>{
       const users = snap.docs.map(d=>d.data());
       dtInstance.clear().rows.add(users).draw();
       applyTierColors();
       refreshAllSelects();
     });
 
-    // ===== UI: Navigation =====
-    $$('nav button').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        $$('.section').forEach(s=>s.style.display='none');
-        const target = btn.getAttribute('data-target');
-        $(target).style.display='block';
-      });
+    // 네비게이션
+    $('nav button').click(function(){
+      const target=$(this).data('target');
+      $('.section').hide();
+      $(target).show();
     });
 
-    // ===== Users: Edit Toggle =====
-    $('#btn-edit-toggle').addEventListener('click',()=>{
-      editable = !editable;
-      $('#btn-edit-toggle').textContent = `편집 모드: ${editable? '켜짐':'꺼짐'}`;
+    // 편집 모드 토글
+    $('#btn-edit-toggle').click(function(){
+      editable=!editable;
+      $(this).text(`편집 모드: ${editable?'켜짐':'꺼짐'}`);
     });
 
-    // ===== Users: Add =====
-    $('#btn-user-add').addEventListener('click', async()=>{
-      const name = prompt('이름을 입력하세요');
+    // 유저 추가
+    $('#btn-user-add').click(async function(){
+      const name=prompt('이름을 입력하세요');
       if(!name) return;
-      const id = crypto.randomUUID();
-      const rating = 1000;
-      const newUser = {
-        userId: id, userName: name, rating,
-        mainLane:'-', subLane:'-', win:0, loss:0,
-        matchNumber: 0, winRate: '0%', tier: getTierByRating(rating), lastPlayDateSince: '-'
+      const id=crypto.randomUUID();
+      const rating=1000;
+      const newUser={
+        userId:id,userName:name,rating,
+        mainLane:'-',subLane:'-',win:0,loss:0,
+        matchNumber:0,winRate:'0%',tier:getTierByRating(rating),lastPlayDateSince:'-'
       };
-      await setDoc(doc(usersCol, id), newUser);
+      await usersCol.doc(id).set(newUser);
     });
 
-    // ===== Users: Inline Edit / Delete =====
-    window.$('#userTable tbody').on('click','td', function(){
+    // 유저 삭제
+    $('#userTable tbody').on('click','.btn-del', async function(){
+      const row = dtInstance.row($(this).closest('tr'));
+      const data = row.data();
+      if(!confirm(`정말 삭제하시겠습니까? (${data.userName})`)) return;
+      await usersCol.doc(data.userId).delete();
+    });
+
+    // inline edit
+    $('#userTable tbody').on('click','td',function(){
       if(!editable) return;
       const cell = dtInstance.cell(this);
-      const idx = cell.index();
-      if(!idx) return;
-      const col = idx.column;
-      // block editing for: No(0), 티어(2), 판수(6), 승률(9), 메뉴(11)
+      const col = cell.index().column;
       if([0,2,6,9,11].includes(col)) return;
-      const orig = cell.data();
-      const $input = window.$('<input>').val(orig);
+      const orig=cell.data();
+      const $input=$('<input>').val(orig);
       if([3,7,8].includes(col)) $input.attr('type','number').attr('min',0);
-      window.$(this).html($input);
-      window.$(this).closest('tr').addClass('editing');
+      $(this).html($input).closest('tr').addClass('editing');
       $input.focus();
-      const finish = async()=>{
-        let val = $input.val();
-        if([3,7,8].includes(col)){ val = val===''?0:Number(val); if(isNaN(val)) val=0; }
-        const rowData = dtInstance.row(idx.row).data();
-        const updated = {...rowData};
-        // map col -> field
-        const map = {1:'userName',3:'rating',4:'mainLane',5:'subLane',7:'win',8:'loss',10:'lastPlayDateSince'};
-        const key = map[col];
-        updated[key] = val;
-        // recompute derived
-        updated.win = parseInt(updated.win)||0; updated.loss = parseInt(updated.loss)||0;
-        updated.matchNumber = (updated.win||0)+(updated.loss||0);
-        updated.winRate = calculateWinRate(updated.win, updated.matchNumber);
-        if(col===3) updated.tier = getTierByRating(parseInt(updated.rating)||0);
-        await setDoc(doc(usersCol, updated.userId), updated);
+      const finish=async()=>{
+        let val=$input.val();
+        if([3,7,8].includes(col)){ val=val===''?0:Number(val); if(isNaN(val)) val=0; }
+        const rowData=dtInstance.row(cell.index().row).data();
+        const updated={...rowData};
+        const map={1:'userName',3:'rating',4:'mainLane',5:'subLane',7:'win',8:'loss',10:'lastPlayDateSince'};
+        const key=map[col];
+        updated[key]=val;
+        updated.win=parseInt(updated.win)||0; updated.loss=parseInt(updated.loss)||0;
+        updated.matchNumber=updated.win+updated.loss;
+        updated.winRate=calculateWinRate(updated.win,updated.matchNumber);
+        if(col===3) updated.tier=getTierByRating(parseInt(updated.rating)||0);
+        await usersCol.doc(updated.userId).set(updated);
       };
-      $input.on('blur', finish).on('keydown', e=>{ if(e.key==='Enter') finish(); if(e.key==='Escape'){ dtInstance.cell(this).data(orig).draw(false); }});
+      $input.on('blur',finish).on('keydown',e=>{
+        if(e.key==='Enter') finish();
+        if(e.key==='Escape'){ cell.data(orig).draw(false); }
+      });
     });
 
-    window.$('#userTable tbody').on('click','.btn-del', async function(){
-      const row = dtInstance.row(window.$(this).closest('tr'));
-      const data = row.data();
-      if(!confirm(`정말 삭제하시겠습니까? ( ${data.userName} )`)) return;
-      await deleteDoc(doc(usersCol, data.userId));
-    });
-
-    // ===== Users: Save Explicit (no-op because realtime), but recompute & persist all =====
-    $('#btn-users-save').addEventListener('click', async()=>{
+    // 전체 저장
+    $('#btn-users-save').click(async function(){
       const rows = dtInstance.rows().data().toArray();
       const ops = rows.map(u=>{
-        const upd = {...u};
-        upd.matchNumber = (parseInt(upd.win)||0) + (parseInt(upd.loss)||0);
-        upd.winRate = calculateWinRate(parseInt(upd.win)||0, upd.matchNumber);
-        upd.tier = getTierByRating(parseInt(upd.rating)||0);
-        return setDoc(doc(usersCol, upd.userId), upd);
+        const upd={...u};
+        upd.matchNumber=(parseInt(upd.win)||0)+(parseInt(upd.loss)||0);
+        upd.winRate=calculateWinRate(parseInt(upd.win)||0,upd.matchNumber);
+        upd.tier=getTierByRating(parseInt(upd.rating)||0);
+        return usersCol.doc(u.userId).set(upd);
       });
       await Promise.all(ops);
-      alert('유저 저장 완료');
+      alert('저장 완료');
     });
 
-    // ===== Build Selects (Match / Log) =====
-    function buildSelects($container, cls, count){
-      $container.innerHTML = '';
-      for(let i=0;i<count;i++){
-        const sel = document.createElement('select');
-        sel.className = cls;
-        sel.innerHTML = `<option value=""></option>`;
-        $container.appendChild(sel);
-      }
-      window.$('.'+cls).select2({placeholder:'선수 선택',width:'100%',allowClear:true});
-    }
-
-    buildSelects($('#match-team'),'match-p',10);
-    buildSelects($('#log-players'),'log-p',10);
-
-    function refreshSelectOptions(selector){
-      const users = dtInstance.rows().data().toArray();
-      const selected = window.$(selector).map(function(){ return window.$(this).val(); }).get().filter(v=>v);
-      const setSel = new Set(selected.map(String));
-      window.$(selector).each(function(){
-        const sel = window.$(this);
-        const cur = sel.val();
-        if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
-        sel.empty().append('<option value=""></option>');
-        users.forEach(u=>{
-          if(!setSel.has(String(u.userId)) || String(u.userId)===String(cur)){
-            sel.append(window.$('<option>').val(u.userId).text(u.userName));
-          }
-        });
-        sel.val(cur||'').select2({placeholder:'선수 선택',width:'100%',allowClear:true});
-      });
-    }
-
+    // Select2 초기화
     function refreshAllSelects(){
-      refreshSelectOptions('.match-p');
-      refreshSelectOptions('.log-p');
-    }
-
-    window.$(document).on('change','.match-p', ()=>refreshSelectOptions('.match-p'));
-    window.$(document).on('change','.log-p', ()=>refreshSelectOptions('.log-p'));
-
-    // ===== Matchmaking =====
-    function generateBalancedTeams(selectedUsers){
-      let bestDiff=Infinity, best=null;
-      const k=5, arr=selectedUsers;
-      const n=arr.length; if(n!==10) return null;
-      const res=[]; (function comb(s,p){ if(p.length===k){res.push(p.slice());return;} for(let i=s;i<n;i++){p.push(arr[i]); comb(i+1,p); p.pop();} })(0,[]);
-      res.forEach(teamA=>{
-        const idsA = new Set(teamA.map(u=>u.userId));
-        const teamB = arr.filter(u=>!idsA.has(u.userId));
-        const sumA = teamA.reduce((s,u)=>s+(parseInt(u.rating)||0),0);
-        const sumB = teamB.reduce((s,u)=>s+(parseInt(u.rating)||0),0);
-        const avgA = Math.round(sumA/5), avgB=Math.round(sumB/5);
-        const diff = Math.abs(avgA-avgB);
-        if(diff<bestDiff){ bestDiff=diff; best={teamA:teamA.slice(), teamB, avgA, avgB}; }
+      $('.match-p').select2({placeholder:'선택',width:'resolve'}).empty();
+      $('.log-p').select2({placeholder:'선택',width:'resolve'}).empty();
+      const names = dtInstance.rows().data().toArray().map(u=>u.userName);
+      $('.match-p,.log-p').each(function(){
+        names.forEach(n=>$(this).append(`<option>${n}</option>`));
       });
-      return best;
     }
 
-    $('#btn-match').addEventListener('click',()=>{
-      const ids = window.$('.match-p').map((_,el)=>window.$(el).val()).get().filter(Boolean);
-      if(ids.length!==10){ alert('10명을 모두 선택해주세요'); return; }
-      const users = dtInstance.rows().data().toArray();
-      const selected = ids.map(id=>users.find(u=>String(u.userId)===String(id))).filter(Boolean);
-      const teams = generateBalancedTeams(selected);
-      if(!teams){ alert('팀을 생성할 수 없습니다.'); return; }
-      let rows='';
-      for(let i=0;i<5;i++) rows += `<tr><td>${teams.teamA[i]?.userName||''}</td><td>${teams.teamB[i]?.userName||''}</td></tr>`;
-      rows += `<tr><td>평균 레이팅: ${teams.avgA}</td><td>평균 레이팅: ${teams.avgB}</td></tr>`;
-      $('#match-result tbody').innerHTML = rows;
-    });
-
-    $('#btn-clear-match').addEventListener('click',()=>{
-      window.$('.match-p').val(null).trigger('change');
-      $('#match-result tbody').innerHTML = '<tr><td colspan="2" style="text-align:center">매칭하기 버튼을 눌러 결과 확인</td></tr>';
-    });
-
-    // ===== Logs (Realtime) =====
-    const logsCol = collection(db, 'matchLogs');
-
-    $('#btn-log-save').addEventListener('click', async()=>{
-      const players = window.$('.log-p').map((_,el)=>window.$(el).val()||'').get();
-      const winners = [], losers=[];
-      players.forEach((p,i)=> i%2===0 ? winners.push(p) : losers.push(p));
-      while(winners.length<5) winners.push('');
-      while(losers.length<5) losers.push('');
-
-      const users = dtInstance.rows().data().toArray();
-      // Rating update locally & persist
-      winners.forEach(id=>{ const u=users.find(x=>String(x.userId)===String(id)); if(u){ u.rating=(+u.rating||0)+10; u.win=(+u.win||0)+1; }});
-      losers.forEach(id=>{ const u=users.find(x=>String(x.userId)===String(id)); if(u){ u.rating=(+u.rating||0)-10; u.loss=(+u.loss||0)+1; }});
-      // persist updates
-      await Promise.all(users.map(u=>{
-        const upd={...u};
-        upd.matchNumber=(upd.win||0)+(upd.loss||0);
-        upd.winRate=calculateWinRate(upd.win||0,upd.matchNumber);
-        upd.tier=getTierByRating(upd.rating||0);
-        return setDoc(doc(usersCol, upd.userId), upd);
-      }));
-
-      await addDoc(logsCol, { createdAt: serverTimestamp(), winners, losers });
-      alert('기록이 저장되었습니다.');
-    });
-
-    // Realtime render logs
-    const logTable = window.$('#logTable').DataTable({ paging:false, data:[], autoWidth:false, columns:[
-      {data:'createdAt'}, {data:'winnersHTML'}, {data:'losersHTML'}, {data:'menu'}
-    ]});
-
-    function resolveName(val){
-      if(!val) return '(미선택)';
-      const u = dtInstance.rows().data().toArray().find(u=>String(u.userId)===String(val) || u.userName===val);
-      return u ? u.userName : val;
-    }
-
-    onSnapshot(query(logsCol, orderBy('createdAt','desc')), (snap)=>{
-      const rows = snap.docs.map(d=>{
-        const data = d.data();
-        const ts = data.createdAt?.toDate?.() || new Date();
-        const timeStr = ts.toLocaleString();
-        const winnersHTML = (data.winners||[]).map(v=>`<span class="pill winner">${resolveName(v)}</span>`).join(' ');
-        const losersHTML = (data.losers||[]).map(v=>`<span class="pill loser">${resolveName(v)}</span>`).join(' ');
-        const menu = `<div class="actions"><button class="btn btn-log-del" data-id="${d.id}">기록 삭제</button></div>`;
-        return {id:d.id, createdAt:timeStr, winnersHTML, losersHTML, menu};
-      });
-      logTable.clear().rows.add(rows).draw();
-    });
-
-    window.$('#logTable tbody').on('click','.btn-log-del', async function(){
-      const id = window.$(this).data('id');
-      if(!confirm('이 기록을 삭제하시겠습니까?')) return;
-      await deleteDoc(doc(logsCol, id));
-    });
-
+  });
   </script>
 </body>
 </html>
