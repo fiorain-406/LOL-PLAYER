@@ -182,19 +182,9 @@ function updateUserEditButtonVisibility(){
       $('#edit-users-btn').hide();
       $('#btn-add-user-bottom').hide();
     }
-    $('#btn-log-save').hide(); 
-  } else if($('#section-match').is(':visible')){
-    $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide();
-    $('#btn-match').show();
-    $('#btn-log-save').hide();
-  } else if($('#section-log').is(':visible')){
-    $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide();
-    $('#btn-match').hide();
-    $('#btn-log-save').toggle(allowedUsers.includes(currentUser));
-  } else {
-    $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom,#btn-match,#btn-log-save').hide();
+  } else { 
+    $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide(); 
   }
-}
 
   $('#btn-match').toggle($('#section-match').is(':visible'));
   $('#btn-log-save').toggle($('#section-log').is(':visible') && allowedUsers.includes(currentUser));
