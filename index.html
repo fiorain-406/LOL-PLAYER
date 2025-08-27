@@ -1,18 +1,58 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>내전 관리 사이트</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>내전 관리 사이트</title>
 
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore-compat.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, doc, writeBatch } 
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAgdmpzynIp1ciAM78cttMqtsWReqmOAfM",
+  authDomain: "lol-player-8f92b.firebaseapp.com",
+  projectId: "lol-player-8f92b",
+  storageBucket: "lol-player-8f92b.appspot.com",
+  messagingSenderId: "497657121304",
+  appId: "1:497657121304:web:3c3c8678290d9fff99116d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window.firestoreDB = db;
+
+async function createTestUser() {
+  try {
+    await addDoc(collection(db, "users"), {
+      userId: 1,
+      userName: "테스트유저",
+      rating: 1000,
+      tier: "브론즈 5",
+      mainLane: "-",
+      subLane: "-",
+      win: 0,
+      loss: 0,
+      matchNumber: 0,
+      winRate: "0%",
+      lastPlayDateSince: "-"
+    });
+    console.log("✅ users 컬렉션과 문서 생성 완료");
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+createTestUser();
+</script>
 
   <style>
     :root{--card:#2a2a2a;--accent1:#ffb347;--accent2:#ff8c42;--text:#f0f0f0;--muted:#555}
@@ -61,259 +101,283 @@
 </head>
 <body>
 
-  <nav>
-    <button data-target="#section-dashboard">대시보드</button>
-    <button data-target="#section-match">자동 팀 생성</button>
-    <button data-target="#section-log">내전 기록</button>
-  </nav>
+<nav>
+  <button id="menu-dashboard">대시보드</button>
+  <button id="menu-match">자동 팀 생성</button>
+  <button id="menu-log">내전 기록</button>
+</nav>
 
-  <!-- 대시보드 -->
-  <section id="section-dashboard" class="section">
-    <div class="toolbar">
-      <button id="btn-edit-toggle" class="btn">편집 모드: 꺼짐</button>
-      <button id="btn-user-add" class="btn">유저 추가</button>
-      <button id="btn-users-save" class="btn">유저 저장</button>
-    </div>
+<section id="section-dashboard" class="section">
+  <table id="userTable" class="display">
+    <thead>
+      <tr>
+        <th>No</th><th>이름</th><th>티어</th><th>레이팅</th><th>주라인</th><th>부라인</th>
+        <th>판수</th><th>승리</th><th>패배</th><th>승률</th><th>최근 경기</th><th>메뉴</th>
+      </tr>
+    </thead>
+  </table>
+</section>
 
-    <table id="userTable" class="display">
-      <thead>
-        <tr>
-          <th>No</th><th>이름</th><th>티어</th><th>레이팅</th><th>주라인</th><th>부라인</th>
-          <th>판수</th><th>승리</th><th>패배</th><th>승률</th><th>최근 경기</th><th>메뉴</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
+<section id="section-match" class="section" style="display:none;">
+  <div id="match-team"></div>
+  <br>
+  <button id="btn-match" class="fixed-btn">매칭하기</button>
+
+  <div id="match-result">
+    <h3>팀 매치 결과</h3>
+    <table>
+      <thead><tr><th>블루팀</th><th>레드팀</th></tr></thead>
+      <tbody><tr><td colspan="2" style="text-align:center">매칭하기 버튼을 눌러 결과 확인</td></tr></tbody>
     </table>
-  </section>
+  </div>
+</section>
 
-  <!-- 자동 팀 생성 -->
-  <section id="section-match" class="section" style="display:none">
-    <div class="grid-2" id="match-team"></div>
-    <div class="toolbar" style="margin-top:16px">
-      <button id="btn-match" class="btn">매칭하기</button>
-      <button id="btn-clear-match" class="btn">선택 초기화</button>
-    </div>
+<section id="section-log" class="section" style="display:none;">
+  <div id="log-players-header">
+    <div>승리팀</div>
+    <div>패배팀</div>
+  </div>
 
-    <div id="match-result">
-      <h3>팀 매치 결과</h3>
-      <table>
-        <thead><tr><th>블루팀</th><th>레드팀</th></tr></thead>
-        <tbody><tr><td colspan="2" style="text-align:center">매칭하기 버튼을 눌러 결과 확인</td></tr></tbody>
-      </table>
-    </div>
-  </section>
+  <div id="log-players"></div>
+  <br>
 
-  <!-- 내전 기록 -->
-  <section id="section-log" class="section" style="display:none">
-    <div class="grid-2" id="log-players"></div>
-    <div class="toolbar">
-      <button id="btn-log-save" class="btn">기록 저장</button>
-    </div>
+  <div id="log-result">
+    <h3>최근 기록</h3>
+    <table>
+      <thead><tr>
+        <th class="date-col">날짜</th>
+        <th>승리팀 멤버</th>
+        <th>패배팀 멤버</th>
+        <th>메뉴</th>
+      </tr></thead>
+      <tbody><tr><td colspan="4" style="text-align:center">저장된 기록이 없습니다.</td></tr></tbody>
+    </table>
+  </div>
+</section>
 
-    <div id="log-result">
-      <h3>최근 기록</h3>
-      <table id="logTable" class="display">
-        <thead>
-          <tr>
-            <th>시간</th>
-            <th>승리팀</th>
-            <th>패배팀</th>
-            <th>메뉴</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
+<button id="start-edit-btn" class="fixed-btn">유저 수정</button>
+<button id="edit-users-btn" class="fixed-btn" style="display:none">유저 수정 완료</button>
+<button id="btn-add-user-bottom" class="fixed-btn" style="display:none">유저 추가</button>
+<button id="btn-log-save" class="fixed-btn">기록 저장</button>
 
-  <script>
-  $(document).ready(function(){
+<script>
+let editable = false;
+let idCounter = 0;
+const allowedUsers = ['admin'];
+let currentUser = prompt("사용자 이름을 입력하세요:") || '';
 
-    // Firebase 초기화
-    const firebaseConfig = {
-      apiKey: "AIzaSyBVAVqBNePwpYzBYpIt68S93toyQPGbOuk",
-      authDomain: "datebase-6d247.firebaseapp.com",
-      projectId: "datebase-6d247",
-      storageBucket: "datebase-6d247.firebasestorage.app",
-      messagingSenderId: "720823690695",
-      appId: "1:720823690695:web:f80544a7604eb9ac2da5e2"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+if(!allowedUsers.includes(currentUser)){
+  $('#menu-log').hide();
+  $('#start-edit-btn').hide();
+}
 
-    // 유틸
-    function calculateWinRate(win, match){ return match===0? '0%': Math.round((win/match)*100)+"%"; }
-    function getTierByRating(r){
-      const rating = Number(r)||0;
-      if(rating>=3000)return'챌린저';
-      if(rating>=2900)return'그마';
-      if(rating>=2800)return'마스터 3';
-      if(rating>=2700)return'마스터 2';
-      if(rating>=2600)return'마스터 1';
-      if(rating>=2500)return'마스터 0';
-      if(rating>=2450)return'다이아 1';
-      if(rating>=2400)return'다이아 2';
-      if(rating>=2350)return'다이아 3';
-      if(rating>=2300)return'다이아 4';
-      if(rating>=2250)return'다이아 5';
-      if(rating>=2200)return'에메랄드 1';
-      if(rating>=2150)return'에메랄드 2';
-      if(rating>=2100)return'에메랄드 3';
-      if(rating>=2050)return'에메랄드 4';
-      if(rating>=2000)return'에메랄드 5';
-      if(rating>=1950)return'플레티넘 1';
-      if(rating>=1900)return'플레티넘 2';
-      if(rating>=1850)return'플레티넘 3';
-      if(rating>=1800)return'플레티넘 4';
-      if(rating>=1750)return'플레티넘 5';
-      if(rating>=1700)return'골드 1';
-      if(rating>=1650)return'골드 2';
-      if(rating>=1600)return'골드 3';
-      if(rating>=1550)return'골드 4';
-      if(rating>=1500)return'골드 5';
-      if(rating>=1450)return'실버 1';
-      if(rating>=1400)return'실버 2';
-      if(rating>=1350)return'실버 3';
-      if(rating>=1300)return'실버 4';
-      if(rating>=1250)return'실버 5';
-      if(rating>=1200)return'브론즈 1';
-      if(rating>=1150)return'브론즈 2';
-      if(rating>=1100)return'브론즈 3';
-      if(rating>=1050)return'브론즈 4';
-      if(rating>=1000)return'브론즈 5';
-      return'아이언';
+function updateUserEditButtonVisibility(){
+  if($('#section-dashboard').is(':visible')){
+    if(editable){
+      $('#start-edit-btn').hide();
+      $('#edit-users-btn').show();
+      $('#btn-add-user-bottom').show();
+    } else if(allowedUsers.includes(currentUser)){
+      $('#start-edit-btn').show();
+      $('#edit-users-btn').hide();
+      $('#btn-add-user-bottom').hide();
     }
+  } else { 
+    $('#start-edit-btn,#edit-users-btn,#btn-add-user-bottom').hide(); 
+  }
 
-    function applyTierColors(){
-      const colors={
-        '아이언':['#fff','#121212'], '브론즈':['#DEB84F','#121212'], '실버':['#BDBDBD','#121212'],
-        '골드':['#FAED7D','#121212'], '플레티넘':['#ABF200','#121212'], '에메랄드':['#2FED28','#121212'],
-        '다이아':['#00D8FF','#121212'], '마스터':['#C98AFF','#121212'], '그마':['#FF3636','#121212'], '챌린저':['linear-gradient(to right,#ffd700,#1e90ff)','#121212']
-      };
-      $('#userTable tbody tr').each(function(){
-        const td = $(this).find('td').eq(2); // 티어 칸
-        const tier = td.text().trim();
-        let bg='#2a2a2a', color='#f0f0f0';
-        for(const k in colors){ if(tier.includes(k)){ bg=colors[k][0]; color=colors[k][1]; break; } }
-        if(tier.includes('챌린저')) td.css('background',bg);
-        else td.css('background-color',bg);
-        td.css('color',color).css('font-weight','700');
-      });
-    }
+  $('#btn-match').toggle($('#section-match').is(':visible'));
+  $('#btn-log-save').toggle($('#section-log').is(':visible') && allowedUsers.includes(currentUser));
+}
 
-    // DataTable 초기화
-    let dtInstance = $('#userTable').DataTable({
-      paging:false, data:[], autoWidth:false,
-      columns:[
-        {data:null, render:(d,t,r,m)=>m.row+1},
-        {data:"userName"}, {data:"tier"}, {data:"rating"}, {data:"mainLane"}, {data:"subLane"},
-        {data:"matchNumber"}, {data:"win"}, {data:"loss"}, {data:"winRate"}, {data:"lastPlayDateSince"},
-        {data:null, defaultContent:'<button class="btn btn-del">삭제</button>', orderable:false}
-      ],
-      columnDefs:[{targets:1,width:'17%',className:'dt-left'},{targets:[4,5],width:'7%'},{targets:10,width:'8%'}]
-    });
+$('nav button').click(function(){
+  $('.section').hide();
+  if(this.id==='menu-dashboard') $('#section-dashboard').show();
+  if(this.id==='menu-match'){ 
+    $('#section-match').show();
+    initPlayers();
+  }
+  if(this.id==='menu-log'){ 
+    $('#section-log').show(); 
+    initPlayers(); 
+    loadLogs(); 
+  }
+  updateUserEditButtonVisibility();
+});
 
-    let editable=false;
+var userTable = $('#userTable').DataTable({
+  paging:false, serverSide:false, data:[], autoWidth:false,
+  columns:[
+    {data:null, render:(d,t,r,m)=> m.row+1},
+    {data:"userName"}, {data:"tier"}, {data:"rating"}, {data:"mainLane"}, {data:"subLane"},
+    {data:"matchNumber"}, {data:"win"}, {data:"loss"}, {data:"winRate"}, {data:"lastPlayDateSince"},
+    {data:null, defaultContent:'<button class="delete-btn">삭제</button>', orderable:false}
+  ],
+  columnDefs:[{targets:1,width:'17%',className:'dt-left'},{targets:4,width:'7%'},{targets:5,width:'7%'},{targets:10,width:'8%'}]
+});
 
-    const usersCol = db.collection('users');
-    usersCol.orderBy('userName').onSnapshot((snap)=>{
-      const users = snap.docs.map(d=>d.data());
-      dtInstance.clear().rows.add(users).draw();
-      applyTierColors();
-      refreshAllSelects();
-    });
+userTable.on('draw', function(){
+  applyTierColors();
+  updateDeleteButtons();
+});
 
-    // 네비게이션
-    $('nav button').click(function(){
-      const target=$(this).data('target');
-      $('.section').hide();
-      $(target).show();
-    });
+function calculateWinRate(win, match){ return match===0 ? '0%' : Math.round((win/match)*100)+'%'; }
 
-    // 편집 모드 토글
-    $('#btn-edit-toggle').click(function(){
-      editable=!editable;
-      $(this).text(`편집 모드: ${editable?'켜짐':'꺼짐'}`);
-    });
+function getTierByRating(r){
+  if(!r) return'아이언';
+  r=+r;
+  if(r>=3000) return'챌린저'; if(r>=2900) return'그마'; if(r>=2800) return'마스터 3'; if(r>=2700) return'마스터 2'; if(r>=2600) return'마스터 1'; if(r>=2500) return'마스터 0';
+  if(r>=2450) return'다이아 1'; if(r>=2400) return'다이아 2'; if(r>=2350) return'다이아 3'; if(r>=2300) return'다이아 4'; if(r>=2250) return'다이아 5';
+  if(r>=2200) return'에메랄드 1'; if(r>=2150) return'에메랄드 2'; if(r>=2100) return'에메랄드 3'; if(r>=2050) return'에메랄드 4'; if(r>=2000) return'에메랄드 5';
+  if(r>=1950) return'플레티넘 1'; if(r>=1900) return'플레티넘 2'; if(r>=1850) return'플레티넘 3'; if(r>=1800) return'플레티넘 4'; if(r>=1750) return'플레티넘 5';
+  if(r>=1700) return'골드 1'; if(r>=1650) return'골드 2'; if(r>=1600) return'골드 3'; if(r>=1550) return'골드 4'; if(r>=1500) return'골드 5';
+  if(r>=1450) return'실버 1'; if(r>=1400) return'실버 2'; if(r>=1350) return'실버 3'; if(r>=1300) return'실버 4'; if(r>=1250) return'실버 5';
+  if(r>=1200) return'브론즈 1'; if(r>=1150) return'브론즈 2'; if(r>=1100) return'브론즈 3'; if(r>=1050) return'브론즈 4'; if(r>=1000) return'브론즈 5';
+  return'아이언';
+}
 
-    // 유저 추가
-    $('#btn-user-add').click(async function(){
-      const name=prompt('이름을 입력하세요');
-      if(!name) return;
-      const id=crypto.randomUUID();
-      const rating=1000;
-      const newUser={
-        userId:id,userName:name,rating,
-        mainLane:'-',subLane:'-',win:0,loss:0,
-        matchNumber:0,winRate:'0%',tier:getTierByRating(rating),lastPlayDateSince:'-'
-      };
-      await usersCol.doc(id).set(newUser);
-    });
-
-    // 유저 삭제
-    $('#userTable tbody').on('click','.btn-del', async function(){
-      const row = dtInstance.row($(this).closest('tr'));
-      const data = row.data();
-      if(!confirm(`정말 삭제하시겠습니까? (${data.userName})`)) return;
-      await usersCol.doc(data.userId).delete();
-    });
-
-    // inline edit
-    $('#userTable tbody').on('click','td',function(){
-      if(!editable) return;
-      const cell = dtInstance.cell(this);
-      const col = cell.index().column;
-      if([0,2,6,9,11].includes(col)) return;
-      const orig=cell.data();
-      const $input=$('<input>').val(orig);
-      if([3,7,8].includes(col)) $input.attr('type','number').attr('min',0);
-      $(this).html($input).closest('tr').addClass('editing');
-      $input.focus();
-      const finish=async()=>{
-        let val=$input.val();
-        if([3,7,8].includes(col)){ val=val===''?0:Number(val); if(isNaN(val)) val=0; }
-        const rowData=dtInstance.row(cell.index().row).data();
-        const updated={...rowData};
-        const map={1:'userName',3:'rating',4:'mainLane',5:'subLane',7:'win',8:'loss',10:'lastPlayDateSince'};
-        const key=map[col];
-        updated[key]=val;
-        updated.win=parseInt(updated.win)||0; updated.loss=parseInt(updated.loss)||0;
-        updated.matchNumber=updated.win+updated.loss;
-        updated.winRate=calculateWinRate(updated.win,updated.matchNumber);
-        if(col===3) updated.tier=getTierByRating(parseInt(updated.rating)||0);
-        await usersCol.doc(updated.userId).set(updated);
-      };
-      $input.on('blur',finish).on('keydown',e=>{
-        if(e.key==='Enter') finish();
-        if(e.key==='Escape'){ cell.data(orig).draw(false); }
-      });
-    });
-
-    // 전체 저장
-    $('#btn-users-save').click(async function(){
-      const rows = dtInstance.rows().data().toArray();
-      const ops = rows.map(u=>{
-        const upd={...u};
-        upd.matchNumber=(parseInt(upd.win)||0)+(parseInt(upd.loss)||0);
-        upd.winRate=calculateWinRate(parseInt(upd.win)||0,upd.matchNumber);
-        upd.tier=getTierByRating(parseInt(upd.rating)||0);
-        return usersCol.doc(u.userId).set(upd);
-      });
-      await Promise.all(ops);
-      alert('저장 완료');
-    });
-
-    // Select2 초기화
-    function refreshAllSelects(){
-      $('.match-p').select2({placeholder:'선택',width:'resolve'}).empty();
-      $('.log-p').select2({placeholder:'선택',width:'resolve'}).empty();
-      const names = dtInstance.rows().data().toArray().map(u=>u.userName);
-      $('.match-p,.log-p').each(function(){
-        names.forEach(n=>$(this).append(`<option>${n}</option>`));
-      });
-    }
-
+function applyTierColors(){
+  $('#userTable tbody tr').each(function(){
+    let $td = $(this).find('td').eq(2), tier = $td.text().trim(), bg='#2a2a2a', color='#f0f0f0';
+    if(tier.includes('아이언')) { bg='#fff'; color='#121212'; }
+    else if(tier.includes('브론즈')) { bg='#DEB84F'; color='#121212'; }
+    else if(tier.includes('실버')) { bg='#BDBDBD'; color='#121212'; }
+    else if(tier.includes('골드')) { bg='#FAED7D'; color='#121212'; }
+    else if(tier.includes('플레티넘')) { bg='#ABF200'; color='#121212'; }
+    else if(tier.includes('에메랄드')) { bg='#2FED28'; color='#121212'; }
+    else if(tier.includes('다이아')) { bg='#00D8FF'; color='#121212'; }
+    else if(tier.includes('마스터')) { bg='#C98AFF'; color='#121212'; }
+    else if(tier.includes('그마')) { bg='#FF3636'; color='#121212'; }
+    else if(tier.includes('챌린저')) { bg='linear-gradient(to right,#ffd700,#1e90ff)'; color='#121212'; }
+    $td.css(tier.includes('챌린저') ? {'background':bg,'color':color,'font-weight':'600'} : {'background-color':bg,'color':color,'font-weight':'600'});
   });
-  </script>
+}
+
+async function saveUsersToLocalStorage() {
+  try {
+    const users = userTable.rows().data().toArray();
+    const batch = writeBatch(window.firestoreDB);
+
+    users.forEach(u => {
+      u.matchNumber = (u.win||0) + (u.loss||0);
+      u.winRate = calculateWinRate(u.win||0, u.matchNumber);
+      u.tier = getTierByRating(u.rating||0);
+      u.userId = u.userId || (++idCounter);
+
+      const ref = doc(window.firestoreDB, 'users', String(u.userId));
+      batch.set(ref, u);  // Firestore에 저장
+    });
+
+    await batch.commit();
+    console.log("✅ Firestore 저장 성공");
+  } catch (e) {
+    console.error("❌ save users error", e);
+  }
+}
+
+$('#btn-add-user-bottom').off('click').on('click', function(){
+  let newId = ++idCounter;
+  let newUser = { userId:newId, userName:'이름', rating:1000, mainLane:'-', subLane:'-', win:0, loss:0, lastPlayDateSince:'-' };
+  newUser.matchNumber = 0; newUser.winRate = calculateWinRate(0,0); newUser.tier = getTierByRating(newUser.rating);
+  userTable.row.add(newUser).draw(false);
+  applyTierColors();
+  updateDeleteButtons();
+  saveUsersToLocalStorage();
+});
+
+$('#start-edit-btn').off('click').on('click', function(){ editable=true; updateUserEditButtonVisibility(); updateDeleteButtons(); });
+$('#edit-users-btn').off('click').on('click', function(){ editable=false; saveUsersToLocalStorage(); updateUserEditButtonVisibility(); updateDeleteButtons(); });
+
+function updateDeleteButtons(){ $('#userTable tbody tr .delete-btn').toggle(editable); }
+
+$('#userTable tbody').off('click', '.delete-btn').on('click','.delete-btn', function(){
+  if(!editable || !confirm('정말 삭제하시겠습니까?')) return;
+  userTable.row($(this).closest('tr')).remove().draw(false);
+  saveUsersToLocalStorage();
+});
+
+$('#userTable').off('click','td').on('click','td', function(){
+  if(!editable) return;
+  let cell = userTable.cell(this);
+  if(!cell.index()) return;
+  let colIdx = cell.index().column;
+  if([0,2,6,9,11].includes(colIdx)) return;
+  let orig = cell.data();
+  let $input = $('<input>').val(orig);
+  if([3,7,8].includes(colIdx)) $input.attr('type','number').attr('min',0);
+  $(this).html($input); $(this).closest('tr').addClass('editing'); $input.focus();
+  function finish(){
+    let val = $input.val();
+    if([3,7,8].includes(colIdx)){ val = val===''?0:Number(val); if(isNaN(val)) val=0; }
+    cell.data(val).draw(false); $(cell.node()).closest('tr').removeClass('editing');
+    updateStatsIfNeeded(colIdx, cell.index().row);
+  }
+  $input.on('blur', finish).on('keydown', e=>{ if(e.key==='Enter') finish(); if(e.key==='Escape'){ cell.data(orig).draw(false); $(cell.node()).closest('tr').removeClass('editing'); }}); 
+});
+
+function updateStatsIfNeeded(colIdx,rowIdx){
+  let data=userTable.row(rowIdx).data();
+  data.win=parseInt(data.win)||0; data.loss=parseInt(data.loss)||0;
+  data.matchNumber=data.win+data.loss; data.winRate=calculateWinRate(data.win,data.matchNumber);
+  if(colIdx===3) data.tier=getTierByRating(parseInt(data.rating)||0);
+  userTable.row(rowIdx).data(data).invalidate().draw(false);
+  updateDeleteButtons(); applyTierColors();
+}
+
+// ---------- 자동 팀 생성 관련 ----------
+function buildSelects(containerId,className,count){
+  const $cont=$('#'+containerId);
+  $cont.empty();
+  for(let i=1;i<=count;i++) $cont.append(`<select class="${className}" id="${containerId}-${i}"></select>`);
+}
+
+function refreshSelectOptions(selector){
+  let users=userTable.rows().data().toArray();
+  let selected=$(selector).map(function(){ return $(this).val(); }).get().filter(v=>v).map(String);
+  let selectedSet=new Set(selected);
+  $(selector).each(function(){
+    let sel=$(this), curVal=sel.val();
+    if(sel.hasClass('select2-hidden-accessible')) sel.select2('destroy');
+    sel.empty().append('<option value=""></option>');
+    users.forEach(u=>{ if(!selectedSet.has(String(u.userId))||String(u.userId)===String(curVal)) sel.append($('<option>').val(u.userId).text(u.userName)); });
+    sel.val(curVal||'').select2({placeholder:'선수 선택',width:'100%',allowClear:true});
+  });
+}
+
+function initPlayers(){
+  if($('#match-team').children().length===0) buildSelects('match-team','match-p',10);
+  if($('#log-players').children().length===0) buildSelects('log-players','log-p',10);
+  refreshSelectOptions('.match-p');
+  refreshSelectOptions('.log-p');
+  $('.match-p').off('change.unique').on('change.unique', ()=>refreshSelectOptions('.match-p'));
+  $('.log-p').off('change.unique').on('change.unique', ()=>refreshSelectOptions('.log-p'));
+}
+
+function generateBalancedTeams(selectedUsers){
+  let bestDiff=Infinity, bestTeams=null;
+  function combinations(arr,k){ let res=[]; (function c(s,p){ if(p.length===k){res.push(p.slice());return;} for(let i=s;i<arr.length;i++){p.push(arr[i]); c(i+1,p); p.pop();}})(0,[]); return res; }
+  let comb = combinations(selectedUsers,5);
+  comb.forEach(teamA=>{
+    let teamB = selectedUsers.filter(u=>!teamA.includes(u));
+    let sumA = teamA.reduce((s,u)=>s+ (parseInt(u.rating||0)),0), sumB = teamB.reduce((s,u)=>s+ (parseInt(u.rating||0)),0);
+    let avgA=Math.round(sumA/5), avgB=Math.round(sumB/5), diff=Math.abs(avgA-avgB);
+    if(diff < bestDiff){ bestDiff=diff; bestTeams={teamA:teamA.slice(),teamB:teamB.slice(),avgA,avgB}; }
+  });
+  return bestTeams;
+}
+
+$('#btn-match').off('click').on('click', function(){
+  let selected = $('.match-p').map(function(){ return $(this).val(); }).get().filter(v=>v);
+  if(selected.length<10){ alert('10명을 선택해주세요.'); return; }
+  let users=userTable.rows().data().toArray().filter(u=>selected.includes(String(u.userId)));
+  let teams=generateBalancedTeams(users);
+  if(!teams) return alert('팀 구성 실패');
+  let $tbody=$('#match-result tbody'); $tbody.empty();
+  let teamARow=teams.teamA.map(u=>u.userName).join(', '), teamBRow=teams.teamB.map(u=>u.userName).join(', ');
+  $tbody.append(`<tr><td>${teamARow} (${teams.avgA})</td><td>${teamBRow} (${teams.avgB})</td></tr>`);
+});
+
+</script>
+
 </body>
 </html>
