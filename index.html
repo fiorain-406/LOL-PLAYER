@@ -155,7 +155,7 @@ input[type=text], input[type=number], input[type=date]{padding:8px;border-radius
   </div>
 </section>
 
-<button id="start-edit-btn" class="fixed-btn" style="bottom:80px;">편집하기</button>
+<button id="start-edit-btn" class="fixed-btn" style="right:20px; bottom:20px;">편집하기</button>
 <button id="edit-users-btn" class="fixed-btn" style="bottom:50px; display:none;">유저 수정 완료</button>
 <button id="btn-add-user-bottom" class="fixed-btn" style="bottom:20px; display:none;">유저 추가</button>
 <button id="btn-log-save" class="fixed-btn" style="right:20px; bottom:20px;">기록 저장</button>
@@ -375,6 +375,10 @@ $('#btn-match').off('click').on('click', function(){
   let $tbody=$('#match-result tbody'); $tbody.empty();
   let teamARow=teams.teamA.map(u=>u.userName).join(', '), teamBRow=teams.teamB.map(u=>u.userName).join(', ');
   $tbody.append(`<tr><td>${teamARow} (${teams.avgA})</td><td>${teamBRow} (${teams.avgB})</td></tr>`);
+});
+
+$(document).ready(function(){
+  updateUserEditButtonVisibility();
 });
 
 </script>
